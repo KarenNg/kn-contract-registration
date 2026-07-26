@@ -1,0 +1,9 @@
+Problem: Please build a Contract Registration system that will allow user to keep track of all of the vendor, contracts and the contract supporting documentations or contractual files tied to each contract.
+For: Contract administrators, Contract Owners, Management team
+Core things to track: I need the system to be able to track the following information :- 1.	Vendor Information 2.	Contract information 3.	Contract supporting document information  Here are how each of the three datasets should be related to one another :- One registered vendor may have 1 or more contracts, thus Contract information registration. One Contract may have one or more contract supporting document information.
+The one workflow (must work v1): The system should allow me to create, change and display the following :- 1.	Vendor information 2.	Contract information 3.	Contract supporting document information
+Success in a week: Able to see how many contracts and the list of contracts with the vendor unique identifier and name listed in one of the dashboard segment. As a result of this system, I will no longer have to track the vendor details and contract details in a Microsoft file. Our contractual files filing system will be tracked and systemized.
+Who will actually use this: Contract administrator, contract owners and Management team
+What it replaces or earns: This will eliminate the need to manually pull out the list of expiring contracts, so that the contract owners is notified for actions of renewal and decision.
+
+Build focus: Optimize for automating one repetitive workflow into a fast, no-friction internal tool.
