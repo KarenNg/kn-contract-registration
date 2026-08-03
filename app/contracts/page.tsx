@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { isExpiringSoon, type ContractWithVendor } from "@/lib/types";
+import { code, errorBanner, primaryButton, severityStripe, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -28,15 +29,12 @@ export default async function ContractsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contracts</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-400">Contracts</h1>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">
             All contracts across every vendor.
           </p>
         </div>
-        <Link
-          href="/contracts/new"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
-        >
+        <Link href="/contracts/new" className={primaryButton}>
           + New contract
         </Link>
       </div>
@@ -50,77 +48,64 @@ export default async function ContractsPage({
         <FilterLink label="Expired" active={status === "expired"} href="/contracts?status=expired" />
       </div>
 
-      {error && (
-        <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error.message}
-        </p>
-      )}
+      {error && <p className={errorBanner}>{error.message}</p>}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <table className="min-w-full divide-y divide-neutral-200 text-sm">
-          <thead className="bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            <tr>
-              <th className="px-4 py-3">Contract</th>
-              <th className="px-4 py-3">Vendor</th>
-              <th className="px-4 py-3">End date</th>
-              <th className="px-4 py-3">Value</th>
-              <th className="px-4 py-3">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {(contracts as ContractWithVendor[] | null)?.map((contract) => (
-              <tr key={contract.id} className="hover:bg-neutral-50">
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/contracts/${contract.id}`}
-                    className="font-medium text-neutral-900 hover:underline"
-                  >
-                    {contract.title}
-                  </Link>
-                  <span className="ml-2 font-mono text-xs text-neutral-400">
-                    {contract.contract_code}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {contract.vendors ? (
-                    <Link
-                      href={`/vendors/${contract.vendors.id}`}
-                      className="hover:underline"
-                    >
-                      {contract.vendors.name}{" "}
-                      <span className="font-mono text-xs text-neutral-400">
-                        ({contract.vendors.vendor_code})
-                      </span>
-                    </Link>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  <div className="flex items-center gap-2">
-                    {formatDate(contract.end_date)}
-                    {contract.status === "active" && isExpiringSoon(contract.end_date) && (
-                      <ExpiringBadge />
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {formatCurrency(contract.value, contract.currency)}
-                </td>
-                <td className="px-4 py-3">
-                  <ContractStatusBadge status={contract.status} />
-                </td>
-              </tr>
-            ))}
-            {contracts?.length === 0 && (
+      <div className={tableWrap}>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-neutral-400">
-                  No contracts match this filter.
-                </td>
+                <th className={th}>Contract</th>
+                <th className={th}>Vendor</th>
+                <th className={th}>End date</th>
+                <th className={th}>Value</th>
+                <th className={th}>Status</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(contracts as ContractWithVendor[] | null)?.map((contract) => {
+                const soon = contract.status === "active" && isExpiringSoon(contract.end_date);
+                return (
+                  <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
+                    <td className="px-4 py-3">
+                      <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-100 hover:text-teal-400">
+                        {contract.title}
+                      </Link>
+                      <span className={`ml-2 ${code}`}>{contract.contract_code}</span>
+                    </td>
+                    <td className={td}>
+                      {contract.vendors ? (
+                        <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-teal-400">
+                          {contract.vendors.name}{" "}
+                          <span className={code}>({contract.vendors.vendor_code})</span>
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className={td}>
+                      <div className="flex items-center gap-2">
+                        {formatDate(contract.end_date)}
+                        {soon && <ExpiringBadge />}
+                      </div>
+                    </td>
+                    <td className={td}>{formatCurrency(contract.value, contract.currency)}</td>
+                    <td className="px-4 py-3">
+                      <ContractStatusBadge status={contract.status} />
+                    </td>
+                  </tr>
+                );
+              })}
+              {contracts?.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                    No contracts match this filter.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -140,8 +125,8 @@ function FilterLink({
       href={href}
       className={`rounded-full px-3 py-1 ${
         active
-          ? "bg-neutral-900 text-white"
-          : "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-100"
+          ? "bg-teal-600 text-white"
+          : "border border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-100"
       }`}
     >
       {label}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { VendorStatusBadge } from "@/components/StatusBadge";
 import type { Vendor } from "@/lib/types";
+import { code, errorBanner, primaryButton, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -25,70 +26,56 @@ export default async function VendorsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Vendors</h1>
-          <p className="text-sm text-neutral-500">
+          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-400">Vendors</h1>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">
             All registered vendors and their contract counts.
           </p>
         </div>
-        <Link
-          href="/vendors/new"
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
-        >
+        <Link href="/vendors/new" className={primaryButton}>
           + New vendor
         </Link>
       </div>
 
-      {error && (
-        <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error.message}
-        </p>
-      )}
+      {error && <p className={errorBanner}>{error.message}</p>}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <table className="min-w-full divide-y divide-neutral-200 text-sm">
-          <thead className="bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
-            <tr>
-              <th className="px-4 py-3">Vendor ID</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Contracts</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100">
-            {(vendors as Vendor[] | null)?.map((vendor) => (
-              <tr key={vendor.id} className="hover:bg-neutral-50">
-                <td className="px-4 py-3 font-mono text-xs text-neutral-500">
-                  {vendor.vendor_code}
-                </td>
-                <td className="px-4 py-3">
-                  <Link
-                    href={`/vendors/${vendor.id}`}
-                    className="font-medium text-neutral-900 hover:underline"
-                  >
-                    {vendor.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {vendor.contact_name ?? "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <VendorStatusBadge status={vendor.status} />
-                </td>
-                <td className="px-4 py-3 text-neutral-600">
-                  {counts.get(vendor.id) ?? 0}
-                </td>
-              </tr>
-            ))}
-            {vendors?.length === 0 && (
+      <div className={tableWrap}>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-neutral-400">
-                  No vendors yet. Create your first one.
-                </td>
+                <th className={th}>Vendor ID</th>
+                <th className={th}>Name</th>
+                <th className={th}>Contact</th>
+                <th className={th}>Status</th>
+                <th className={th}>Contracts</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(vendors as Vendor[] | null)?.map((vendor) => (
+                <tr key={vendor.id} className={tr}>
+                  <td className={`px-4 py-3 ${code}`}>{vendor.vendor_code}</td>
+                  <td className="px-4 py-3">
+                    <Link href={`/vendors/${vendor.id}`} className="font-medium text-slate-100 hover:text-teal-400">
+                      {vendor.name}
+                    </Link>
+                  </td>
+                  <td className={td}>{vendor.contact_name ?? "—"}</td>
+                  <td className="px-4 py-3">
+                    <VendorStatusBadge status={vendor.status} />
+                  </td>
+                  <td className={`${td} tabular-nums`}>{counts.get(vendor.id) ?? 0}</td>
+                </tr>
+              ))}
+              {vendors?.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                    No vendors yet. Create your first one.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

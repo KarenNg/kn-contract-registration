@@ -7,6 +7,18 @@ import { deleteVendor, updateVendor } from "@/app/vendors/actions";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { isExpiringSoon, type Contract, type Vendor } from "@/lib/types";
+import {
+  code,
+  dangerLink,
+  errorBanner,
+  panel,
+  primaryButton,
+  severityStripe,
+  tableWrap,
+  td,
+  th,
+  tr,
+} from "@/components/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -39,38 +51,34 @@ export default async function VendorDetailPage({
 
   const updateVendorWithId = updateVendor.bind(null, id);
   const deleteVendorWithId = deleteVendor.bind(null, id);
+  const typedContracts = (contracts as Contract[] | null) ?? [];
 
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/vendors" className="text-sm text-neutral-500 hover:underline">
+        <Link href="/vendors" className="text-sm text-slate-400 hover:text-teal-400">
           ← All vendors
         </Link>
       </div>
 
-      {errorMessage && (
-        <p className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
-          {errorMessage}
-        </p>
-      )}
+      {errorMessage && <p className={errorBanner}>{errorMessage}</p>}
 
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-mono text-xs text-neutral-400">{(vendor as Vendor).vendor_code}</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{(vendor as Vendor).name}</h1>
+          <p className={code}>{(vendor as Vendor).vendor_code}</p>
+          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-100">
+            {(vendor as Vendor).name}
+          </h1>
           <div className="mt-2">
             <VendorStatusBadge status={(vendor as Vendor).status} />
           </div>
         </div>
-        <Link
-          href={`/contracts/new?vendor_id=${id}`}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-semibold text-white hover:bg-neutral-700"
-        >
+        <Link href={`/contracts/new?vendor_id=${id}`} className={primaryButton}>
           + New contract
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 rounded-lg border border-neutral-200 bg-white p-6 sm:grid-cols-2">
+      <div className={`grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 ${panel}`}>
         <Field label="Contact name" value={(vendor as Vendor).contact_name} />
         <Field label="Contact email" value={(vendor as Vendor).contact_email} />
         <Field label="Contact phone" value={(vendor as Vendor).contact_phone} />
@@ -83,63 +91,59 @@ export default async function VendorDetailPage({
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold tracking-tight">
-          Contracts ({contracts?.length ?? 0})
+        <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+          Contracts ({typedContracts.length})
         </h2>
-        <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-          <table className="min-w-full divide-y divide-neutral-200 text-sm">
-            <thead className="bg-neutral-50 text-left text-xs font-semibold uppercase tracking-wide text-neutral-500">
-              <tr>
-                <th className="px-4 py-3">Contract</th>
-                <th className="px-4 py-3">End date</th>
-                <th className="px-4 py-3">Value</th>
-                <th className="px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100">
-              {(contracts as Contract[] | null)?.map((contract) => (
-                <tr key={contract.id} className="hover:bg-neutral-50">
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/contracts/${contract.id}`}
-                      className="font-medium text-neutral-900 hover:underline"
-                    >
-                      {contract.title}
-                    </Link>
-                    <span className="ml-2 font-mono text-xs text-neutral-400">
-                      {contract.contract_code}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600">
-                    <div className="flex items-center gap-2">
-                      {formatDate(contract.end_date)}
-                      {contract.status === "active" && isExpiringSoon(contract.end_date) && (
-                        <ExpiringBadge />
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-600">
-                    {formatCurrency(contract.value, contract.currency)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <ContractStatusBadge status={contract.status} />
-                  </td>
-                </tr>
-              ))}
-              {contracts?.length === 0 && (
+        <div className={tableWrap}>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-neutral-400">
-                    No contracts for this vendor yet.
-                  </td>
+                  <th className={th}>Contract</th>
+                  <th className={th}>End date</th>
+                  <th className={th}>Value</th>
+                  <th className={th}>Status</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {typedContracts.map((contract) => {
+                  const soon = contract.status === "active" && isExpiringSoon(contract.end_date);
+                  return (
+                    <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
+                      <td className="px-4 py-3">
+                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-100 hover:text-teal-400">
+                          {contract.title}
+                        </Link>
+                        <span className={`ml-2 ${code}`}>{contract.contract_code}</span>
+                      </td>
+                      <td className={td}>
+                        <div className="flex items-center gap-2">
+                          {formatDate(contract.end_date)}
+                          {soon && <ExpiringBadge />}
+                        </div>
+                      </td>
+                      <td className={td}>{formatCurrency(contract.value, contract.currency)}</td>
+                      <td className="px-4 py-3">
+                        <ContractStatusBadge status={contract.status} />
+                      </td>
+                    </tr>
+                  );
+                })}
+                {typedContracts.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                      No contracts for this vendor yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
-      <details className="rounded-lg border border-neutral-200 bg-white p-6">
-        <summary className="cursor-pointer text-lg font-semibold tracking-tight">
+      <details className={`p-6 ${panel}`}>
+        <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-400">
           Edit vendor
         </summary>
         <div className="mt-4 max-w-2xl">
@@ -148,10 +152,7 @@ export default async function VendorDetailPage({
       </details>
 
       <form action={deleteVendorWithId}>
-        <ConfirmSubmitButton
-          confirmMessage="Delete this vendor? This cannot be undone."
-          className="text-sm font-medium text-red-600 hover:underline"
-        >
+        <ConfirmSubmitButton confirmMessage="Delete this vendor? This cannot be undone." className={dangerLink}>
           Delete vendor
         </ConfirmSubmitButton>
       </form>
@@ -162,10 +163,8 @@ export default async function VendorDetailPage({
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">
-        {label}
-      </p>
-      <p className="mt-0.5 text-sm text-neutral-800">{value ?? "—"}</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+      <p className="mt-0.5 text-sm text-slate-200">{value ?? "—"}</p>
     </div>
   );
 }

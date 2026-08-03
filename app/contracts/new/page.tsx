@@ -1,6 +1,7 @@
 import { ContractForm } from "@/components/ContractForm";
 import { createContract } from "@/app/contracts/actions";
 import { createClient } from "@/lib/supabase/server";
+import { panel } from "@/components/theme";
 
 export default async function NewContractPage({
   searchParams,
@@ -17,17 +18,13 @@ export default async function NewContractPage({
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">New contract</h1>
-        <p className="text-sm text-neutral-500">
+        <h1 className="text-sm font-bold uppercase tracking-wider text-slate-400">New contract</h1>
+        <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">
           Register a contract against one of your vendors.
         </p>
       </div>
-      <div className="rounded-lg border border-neutral-200 bg-white p-6">
-        <ContractForm
-          vendors={vendors ?? []}
-          defaultVendorId={vendor_id}
-          action={createContract}
-        />
+      <div className={`p-6 ${panel}`}>
+        <ContractForm vendors={vendors ?? []} defaultVendorId={vendor_id} action={createContract} />
       </div>
     </div>
   );
