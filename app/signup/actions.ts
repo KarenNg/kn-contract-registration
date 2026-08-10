@@ -2,15 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-
-function slugify(name: string): string {
-  const base = name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-  return base || "company";
-}
+import { provisionOrganization } from "@/lib/auth";
 
 export async function signUp(formData: FormData) {
   const companyName = String(formData.get("company_name") ?? "").trim();
@@ -24,7 +16,13 @@ export async function signUp(formData: FormData) {
 
   const supabase = await createClient();
 
-  const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    // Stored so provisionOrganization can create the workspace later if this
+    // project requires email confirmation and no session comes back below.
+    options: { data: { company_name: companyName, full_name: fullName || null } },
+  });
 
   if (authError) {
     redirect(`/signup?error=${encodeURIComponent(authError.message)}`);
@@ -32,44 +30,11 @@ export async function signUp(formData: FormData) {
 
   if (!authData.user || !authData.session) {
     redirect(
-      `/login?notice=${encodeURIComponent("Check your email to confirm your account, then log in.")}`,
+      `/login?notice=${encodeURIComponent("Check your email to confirm your account, then log in to finish setting up your workspace.")}`,
     );
   }
 
-  const baseSlug = slugify(companyName);
-  let slug = baseSlug;
-  let organizationId: string | null = null;
-
-  for (let attempt = 0; attempt < 5 && !organizationId; attempt++) {
-    const { data: org, error: orgError } = await supabase
-      .from("organizations")
-      .insert({ name: companyName, slug })
-      .select("id")
-      .single();
-
-    if (org) {
-      organizationId = org.id;
-    } else if (orgError?.code === "23505") {
-      slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
-    } else if (orgError) {
-      throw new Error(orgError.message);
-    }
-  }
-
-  if (!organizationId) {
-    throw new Error("Could not create your workspace. Please try again.");
-  }
-
-  const { error: profileError } = await supabase.from("profiles").insert({
-    id: authData.user.id,
-    organization_id: organizationId,
-    full_name: fullName || null,
-    role: "owner",
-  });
-
-  if (profileError) {
-    throw new Error(profileError.message);
-  }
+  await provisionOrganization(supabase, authData.user, { companyName, fullName });
 
   redirect("/");
 }
