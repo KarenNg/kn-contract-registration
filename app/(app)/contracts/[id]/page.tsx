@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { ContractStatusBadge } from "@/components/StatusBadge";
-import { deleteContract, updateContract } from "@/app/contracts/actions";
-import { deleteContractDocument, uploadContractDocument } from "@/app/contracts/documents-actions";
+import { deleteContract, updateContract } from "@/app/(app)/contracts/actions";
+import { deleteContractDocument, uploadContractDocument } from "@/app/(app)/contracts/documents-actions";
 import { formatBytes, formatDate, formatDateTime } from "@/lib/format";
 import { getDocumentPublicUrl } from "@/lib/storage";
 import {

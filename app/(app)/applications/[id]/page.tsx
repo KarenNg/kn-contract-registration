@@ -8,7 +8,7 @@ import {
   deleteApplication,
   markUnderReview,
   rejectApplication,
-} from "@/app/applications/actions";
+} from "@/app/(app)/applications/actions";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import type { VendorApplication } from "@/lib/types";
 import {

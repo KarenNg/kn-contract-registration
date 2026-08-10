@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function submitApplication(formData: FormData) {
+export async function submitApplication(organizationSlug: string, formData: FormData) {
   const rawValue = String(formData.get("requested_value") ?? "").trim();
 
   const values = {
@@ -25,9 +25,20 @@ export async function submitApplication(formData: FormData) {
   }
 
   const supabase = await createClient();
+
+  const { data: organization, error: orgError } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("slug", organizationSlug)
+    .single();
+
+  if (orgError || !organization) {
+    throw new Error("This application link is no longer valid.");
+  }
+
   const { data, error } = await supabase
     .from("vendor_applications")
-    .insert(values)
+    .insert({ ...values, organization_id: organization.id })
     .select("application_code")
     .single();
 

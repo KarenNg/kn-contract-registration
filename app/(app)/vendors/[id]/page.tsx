@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { VendorForm } from "@/components/VendorForm";
 import { ContractStatusBadge, ExpiringBadge, VendorStatusBadge } from "@/components/StatusBadge";
-import { deleteVendor, updateVendor } from "@/app/vendors/actions";
+import { deleteVendor, updateVendor } from "@/app/(app)/vendors/actions";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { isExpiringSoon, type Contract, type Vendor } from "@/lib/types";
