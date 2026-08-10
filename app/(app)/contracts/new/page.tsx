@@ -1,5 +1,5 @@
 import { ContractForm } from "@/components/ContractForm";
-import { createContract } from "@/app/contracts/actions";
+import { createContract } from "@/app/(app)/contracts/actions";
 import { createClient } from "@/lib/supabase/server";
 import { panel } from "@/components/theme";
 

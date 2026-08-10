@@ -1,5 +1,5 @@
 import { VendorForm } from "@/components/VendorForm";
-import { createVendor } from "@/app/vendors/actions";
+import { createVendor } from "@/app/(app)/vendors/actions";
 import { panel } from "@/components/theme";
 
 export default function NewVendorPage() {

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
 import { ApplicationStatusBadge } from "@/components/StatusBadge";
 import { formatCurrency, formatDateTime } from "@/lib/format";
 import type { VendorApplication } from "@/lib/types";
@@ -8,6 +9,8 @@ import { code, errorBanner, secondaryButton, tableWrap, td, th, tr } from "@/com
 export const dynamic = "force-dynamic";
 
 export default async function ApplicationsPage() {
+  const profile = await requireProfile();
+  const applyHref = `/apply/${profile.organizationSlug}`;
   const supabase = await createClient();
   const { data: applications, error } = await supabase
     .from("vendor_applications")
@@ -29,7 +32,7 @@ export default async function ApplicationsPage() {
             <p className="mt-1 text-sm text-amber-400">{pending} awaiting your review</p>
           )}
         </div>
-        <Link href="/apply" className={secondaryButton}>
+        <Link href={applyHref} className={secondaryButton}>
           View public application form ↗
         </Link>
       </div>
@@ -73,7 +76,7 @@ export default async function ApplicationsPage() {
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                     No applications yet.{" "}
-                    <Link href="/apply" className="text-teal-400 hover:underline">
+                    <Link href={applyHref} className="text-teal-400 hover:underline">
                       Submit one
                     </Link>
                     .

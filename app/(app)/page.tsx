@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
 import { ApplicationStatusBadge, ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { isExpiringSoon, type ContractWithVendor, type VendorApplication } from "@/lib/types";
@@ -8,6 +9,8 @@ import { code, panel, panelHeader, severityStripe, tableWrap, td, th, tr } from 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const profile = await requireProfile();
+  const applyHref = `/apply/${profile.organizationSlug}`;
   const supabase = await createClient();
 
   const [
@@ -70,7 +73,7 @@ export default async function DashboardPage() {
           warn={pendingApplications.length > 0}
         />
         <Link
-          href="/apply"
+          href={applyHref}
           className={`${panel} flex items-center justify-between p-5 hover:border-teal-700`}
         >
           <span>
