@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
-import { formatCurrency, formatDate } from "@/lib/format";
-import { isExpiringSoon, type ContractWithVendor } from "@/lib/types";
+import { ApplicationStatusBadge, ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
+import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
+import { isExpiringSoon, type ContractWithVendor, type VendorApplication } from "@/lib/types";
 import { code, panel, panelHeader, severityStripe, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
@@ -10,20 +10,34 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const [{ count: vendorCount }, { count: contractCount }, { count: documentCount }, { data: contracts }] =
-    await Promise.all([
-      supabase.from("vendors").select("*", { count: "exact", head: true }),
-      supabase.from("contracts").select("*", { count: "exact", head: true }),
-      supabase.from("contract_documents").select("*", { count: "exact", head: true }),
-      supabase
-        .from("contracts")
-        .select("*, vendors(id, vendor_code, name)")
-        .order("end_date", { ascending: true, nullsFirst: false }),
-    ]);
+  const [
+    { count: vendorCount },
+    { count: contractCount },
+    { count: documentCount },
+    { data: contracts },
+    { data: applications },
+  ] = await Promise.all([
+    supabase.from("vendors").select("*", { count: "exact", head: true }),
+    supabase.from("contracts").select("*", { count: "exact", head: true }),
+    supabase.from("contract_documents").select("*", { count: "exact", head: true }),
+    supabase
+      .from("contracts")
+      .select("*, vendors(id, vendor_code, name)")
+      .order("end_date", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("vendor_applications")
+      .select("*")
+      .order("created_at", { ascending: false }),
+  ]);
 
   const allContracts = (contracts as ContractWithVendor[] | null) ?? [];
   const expiring = allContracts.filter(
     (c) => c.status === "active" && isExpiringSoon(c.end_date),
+  );
+
+  const allApplications = (applications as VendorApplication[] | null) ?? [];
+  const pendingApplications = allApplications.filter(
+    (a) => a.status === "submitted" || a.status === "under_review",
   );
 
   return (
@@ -47,6 +61,67 @@ export default async function DashboardPage() {
           warn={expiring.length > 0}
         />
       </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <KpiTile
+          label="Applications pending review"
+          value={pendingApplications.length}
+          href="/applications"
+          warn={pendingApplications.length > 0}
+        />
+        <Link
+          href="/apply"
+          className={`${panel} flex items-center justify-between p-5 hover:border-teal-700`}
+        >
+          <span>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Customer journey</p>
+            <p className="mt-1 text-sm font-semibold text-slate-100">Open the public application form →</p>
+          </span>
+        </Link>
+      </div>
+
+      {pendingApplications.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-sky-400">
+            New vendor applications
+          </h2>
+          <div className={tableWrap}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={th}>Reference</th>
+                    <th className={th}>Company</th>
+                    <th className={th}>Requested contract</th>
+                    <th className={th}>Submitted</th>
+                    <th className={th}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingApplications.map((application) => (
+                    <tr key={application.id} className={tr}>
+                      <td className={`px-4 py-3 ${code}`}>{application.application_code}</td>
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/applications/${application.id}`}
+                          className="font-medium text-slate-100 hover:text-teal-400"
+                        >
+                          {application.company_name}
+                        </Link>
+                      </td>
+                      <td className={td}>{application.requested_contract_title}</td>
+                      <td className={td}>{formatDateTime(application.created_at)}</td>
+                      <td className="px-4 py-3">
+                        <ApplicationStatusBadge status={application.status} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
 
       {expiring.length > 0 && (
         <section className="space-y-3">

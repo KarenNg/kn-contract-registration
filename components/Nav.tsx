@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/vendors", label: "Vendors" },
   { href: "/contracts", label: "Contracts" },
+  { href: "/applications", label: "Applications" },
 ];
 
 export function Nav() {
@@ -18,7 +19,7 @@ export function Nav() {
         <Link href="/" className="text-sm font-bold uppercase tracking-wider text-slate-100">
           Contract<span className="text-teal-400">Ops</span>
         </Link>
-        <nav className="flex gap-1 text-sm font-medium">
+        <nav className="flex items-center gap-1 text-sm font-medium">
           {LINKS.map((link) => {
             const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
             return (
@@ -35,6 +36,12 @@ export function Nav() {
               </Link>
             );
           })}
+          <Link
+            href="/apply"
+            className="ml-2 rounded-md border border-teal-700 px-3 py-1.5 text-teal-400 transition-colors hover:bg-teal-950"
+          >
+            Apply as a vendor →
+          </Link>
         </nav>
       </div>
     </header>

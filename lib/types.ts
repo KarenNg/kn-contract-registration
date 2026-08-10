@@ -7,6 +7,12 @@ export type ContractStatus =
   | "terminated"
   | "expired";
 
+export type ApplicationStatus =
+  | "submitted"
+  | "under_review"
+  | "approved"
+  | "rejected";
+
 export type DocumentType =
   | "signed_contract"
   | "amendment"
@@ -53,6 +59,29 @@ export interface ContractWithVendor extends Contract {
   vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
 }
 
+export interface VendorApplication {
+  id: string;
+  application_code: string;
+  company_name: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  address: string | null;
+  requested_contract_title: string;
+  requested_contract_type: string | null;
+  requested_value: number | null;
+  requested_start_date: string | null;
+  applicant_notes: string | null;
+  status: ApplicationStatus;
+  reviewer_name: string | null;
+  review_notes: string | null;
+  decided_at: string | null;
+  vendor_id: string | null;
+  contract_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ContractDocument {
   id: string;
   contract_id: string;
@@ -71,6 +100,13 @@ export const CONTRACT_STATUSES: ContractStatus[] = [
   "renewed",
   "terminated",
   "expired",
+];
+
+export const APPLICATION_STATUSES: ApplicationStatus[] = [
+  "submitted",
+  "under_review",
+  "approved",
+  "rejected",
 ];
 
 export const DOCUMENT_TYPES: DocumentType[] = [
