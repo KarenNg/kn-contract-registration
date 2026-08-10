@@ -10,6 +10,7 @@ export interface CurrentProfile {
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
+  isPlatformAdmin: boolean;
 }
 
 export function slugify(name: string): string {
@@ -74,6 +75,7 @@ export async function provisionOrganization(
     id: user.id,
     organization_id: organizationId,
     full_name: fullName,
+    email: user.email ?? null,
     role: "owner",
   });
 
@@ -101,7 +103,7 @@ export async function requireProfile(): Promise<CurrentProfile> {
 
   let { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, organizations(id, name, slug)")
+    .select("full_name, is_platform_admin, organizations(id, name, slug)")
     .eq("id", user.id)
     .single();
 
@@ -109,7 +111,7 @@ export async function requireProfile(): Promise<CurrentProfile> {
     await provisionOrganization(supabase, user);
     ({ data: profile } = await supabase
       .from("profiles")
-      .select("full_name, organizations(id, name, slug)")
+      .select("full_name, is_platform_admin, organizations(id, name, slug)")
       .eq("id", user.id)
       .single());
   }
@@ -131,5 +133,6 @@ export async function requireProfile(): Promise<CurrentProfile> {
     organizationId: organization.id,
     organizationName: organization.name,
     organizationSlug: organization.slug,
+    isPlatformAdmin: profile.is_platform_admin ?? false,
   };
 }

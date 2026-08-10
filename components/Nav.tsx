@@ -15,10 +15,12 @@ export function Nav({
   organizationName,
   organizationSlug,
   email,
+  isPlatformAdmin,
 }: {
   organizationName: string;
   organizationSlug: string;
   email: string | null;
+  isPlatformAdmin: boolean;
 }) {
   const pathname = usePathname();
 
@@ -50,6 +52,18 @@ export function Nav({
               </Link>
             );
           })}
+          {isPlatformAdmin && (
+            <Link
+              href="/admin"
+              className={`rounded-md px-3 py-1.5 transition-colors ${
+                pathname.startsWith("/admin")
+                  ? "bg-slate-800 text-teal-400"
+                  : "text-slate-400 hover:text-slate-100"
+              }`}
+            >
+              Admin
+            </Link>
+          )}
           <Link
             href={`/apply/${organizationSlug}`}
             className="ml-2 rounded-md border border-teal-700 px-3 py-1.5 text-teal-400 transition-colors hover:bg-teal-950"
