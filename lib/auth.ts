@@ -78,6 +78,13 @@ export async function provisionOrganization(
   });
 
   if (profileError) {
+    if (profileError.code === "23505") {
+      // A concurrent request (e.g. two near-simultaneous page loads) already
+      // created this user's profile first. Drop the now-unused organization
+      // we just created and let the caller re-fetch the real one.
+      await supabase.from("organizations").delete().eq("id", organizationId);
+      return;
+    }
     throw new Error(profileError.message);
   }
 }
