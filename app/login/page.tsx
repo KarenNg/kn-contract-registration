@@ -22,15 +22,15 @@ export default async function LoginPage({
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
       <div className="mb-6">
-        <p className="text-sm font-bold uppercase tracking-wider text-slate-100">
-          Contract<span className="text-teal-400">Ops</span>
+        <p className="text-sm font-bold uppercase tracking-wider text-slate-900">
+          Contract<span className="text-teal-600">Ops</span>
         </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-100">
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
           Log in to your workspace
         </h1>
       </div>
 
-      {notice && <p className="mb-4 rounded-md border border-teal-900/50 bg-teal-950/50 px-4 py-3 text-sm text-teal-300">{notice}</p>}
+      {notice && <p className="mb-4 rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">{notice}</p>}
       {error && <p className={`mb-4 ${errorBanner}`}>{error}</p>}
 
       <div className={`p-6 ${panel}`}>
@@ -49,9 +49,9 @@ export default async function LoginPage({
         </form>
       </div>
 
-      <p className="mt-6 text-center text-sm text-slate-400">
+      <p className="mt-6 text-center text-sm text-slate-500">
         New company?{" "}
-        <Link href="/signup" className="font-medium text-teal-400 hover:underline">
+        <Link href="/signup" className="font-medium text-teal-600 hover:underline">
           Create a workspace
         </Link>
       </p>

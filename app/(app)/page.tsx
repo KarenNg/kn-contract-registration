@@ -48,7 +48,7 @@ export default async function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-sm font-bold uppercase tracking-wider text-slate-400">Dashboard</h1>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
             Vendors, contracts, and documents at a glance.
           </p>
         </div>
@@ -78,14 +78,14 @@ export default async function DashboardPage() {
         >
           <span>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Customer journey</p>
-            <p className="mt-1 text-sm font-semibold text-slate-100">Open the public application form →</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">Open the public application form →</p>
           </span>
         </Link>
       </div>
 
       {pendingApplications.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-sky-400">
+          <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-sky-600">
             New vendor applications
           </h2>
           <div className={tableWrap}>
@@ -107,7 +107,7 @@ export default async function DashboardPage() {
                       <td className="px-4 py-3">
                         <Link
                           href={`/applications/${application.id}`}
-                          className="font-medium text-slate-100 hover:text-teal-400"
+                          className="font-medium text-slate-900 hover:text-teal-600"
                         >
                           {application.company_name}
                         </Link>
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
 
       {expiring.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+          <h2 className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-red-600">
             ⚠ Renewal decision needed
           </h2>
           <div className={tableWrap}>
@@ -147,14 +147,14 @@ export default async function DashboardPage() {
                   {expiring.map((contract) => (
                     <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, true)}`}>
                       <td className="px-4 py-3">
-                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-100 hover:text-teal-400">
+                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-600">
                           {contract.title}
                         </Link>
                       </td>
                       <td className={`px-4 py-3 ${code}`}>{contract.vendors?.vendor_code ?? "—"}</td>
                       <td className="px-4 py-3">
                         {contract.vendors ? (
-                          <Link href={`/vendors/${contract.vendors.id}`} className="text-slate-300 hover:text-teal-400">
+                          <Link href={`/vendors/${contract.vendors.id}`} className="text-slate-700 hover:text-teal-600">
                             {contract.vendors.name}
                           </Link>
                         ) : (
@@ -175,7 +175,7 @@ export default async function DashboardPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">All contracts</h2>
-          <Link href="/contracts/new" className="text-sm font-semibold text-teal-400 hover:text-teal-300">
+          <Link href="/contracts/new" className="text-sm font-semibold text-teal-600 hover:text-teal-700">
             + New contract
           </Link>
         </div>
@@ -198,14 +198,14 @@ export default async function DashboardPage() {
                   return (
                     <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                       <td className="px-4 py-3">
-                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-100 hover:text-teal-400">
+                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-600">
                           {contract.title}
                         </Link>
                       </td>
                       <td className={`px-4 py-3 ${code}`}>{contract.vendors?.vendor_code ?? "—"}</td>
                       <td className="px-4 py-3">
                         {contract.vendors ? (
-                          <Link href={`/vendors/${contract.vendors.id}`} className="text-slate-300 hover:text-teal-400">
+                          <Link href={`/vendors/${contract.vendors.id}`} className="text-slate-700 hover:text-teal-600">
                             {contract.vendors.name}
                           </Link>
                         ) : (
@@ -229,7 +229,7 @@ export default async function DashboardPage() {
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                       No contracts yet.{" "}
-                      <Link href="/contracts/new" className="text-teal-400 hover:underline">
+                      <Link href="/contracts/new" className="text-teal-600 hover:underline">
                         Create one
                       </Link>
                       .
@@ -258,10 +258,10 @@ function KpiTile({
 }) {
   const content = (
     <div
-      className={`${panel} p-5 ${warn ? "border-amber-600/40 bg-gradient-to-b from-amber-500/10 to-slate-900" : ""}`}
+      className={`${panel} p-5 ${warn ? "border-red-300 bg-red-50" : ""}`}
     >
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className={`mt-1 text-3xl font-bold tabular-nums ${warn ? "text-amber-400" : "text-slate-100"}`}>
+      <p className={`mt-1 text-3xl font-bold tabular-nums ${warn ? "text-red-700" : "text-slate-900"}`}>
         {value}
       </p>
     </div>

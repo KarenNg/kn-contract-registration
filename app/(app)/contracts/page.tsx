@@ -29,8 +29,8 @@ export default async function ContractsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-400">Contracts</h1>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">
+          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Contracts</h1>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
             All contracts across every vendor.
           </p>
         </div>
@@ -68,14 +68,14 @@ export default async function ContractsPage({
                 return (
                   <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                     <td className="px-4 py-3">
-                      <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-100 hover:text-teal-400">
+                      <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-700">
                         {contract.title}
                       </Link>
                       <span className={`ml-2 ${code}`}>{contract.contract_code}</span>
                     </td>
                     <td className={td}>
                       {contract.vendors ? (
-                        <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-teal-400">
+                        <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-teal-700">
                           {contract.vendors.name}{" "}
                           <span className={code}>({contract.vendors.vendor_code})</span>
                         </Link>
@@ -126,7 +126,7 @@ function FilterLink({
       className={`rounded-full px-3 py-1 ${
         active
           ? "bg-teal-600 text-white"
-          : "border border-slate-700 bg-slate-900 text-slate-400 hover:text-slate-100"
+          : "border border-slate-300 bg-white text-slate-500 hover:text-slate-900"
       }`}
     >
       {label}

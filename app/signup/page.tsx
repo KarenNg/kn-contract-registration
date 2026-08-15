@@ -22,13 +22,13 @@ export default async function SignupPage({
   return (
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
       <div className="mb-6">
-        <p className="text-sm font-bold uppercase tracking-wider text-slate-100">
-          Contract<span className="text-teal-400">Ops</span>
+        <p className="text-sm font-bold uppercase tracking-wider text-slate-900">
+          Contract<span className="text-teal-600">Ops</span>
         </p>
-        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-100">
+        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
           Create your workspace
         </h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-slate-500">
           Your own private space for vendors, contracts, and vendor applications.
         </p>
       </div>
@@ -59,9 +59,9 @@ export default async function SignupPage({
         </form>
       </div>
 
-      <p className="mt-6 text-center text-sm text-slate-400">
+      <p className="mt-6 text-center text-sm text-slate-500">
         Already have a workspace?{" "}
-        <Link href="/login" className="font-medium text-teal-400 hover:underline">
+        <Link href="/login" className="font-medium text-teal-600 hover:underline">
           Log in
         </Link>
       </p>

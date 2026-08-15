@@ -59,8 +59,8 @@ export default async function PlatformAdminPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-sm font-bold uppercase tracking-wider text-slate-400">Platform admin</h1>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">
+        <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Platform admin</h1>
+        <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
           Every company workspace signed up to ContractOps.
         </p>
         <p className="mt-1 text-sm text-slate-500">
@@ -89,15 +89,15 @@ export default async function PlatformAdminPage() {
                 const orgStats = statsByOrg.get(org.id);
                 return (
                   <tr key={org.id} className={tr}>
-                    <td className="px-4 py-3 font-medium text-slate-100">{org.name}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">{org.name}</td>
                     <td className={`px-4 py-3 ${code}`}>{org.slug}</td>
                     <td className="px-4 py-3">
                       {orgMembers.length === 0 ? (
-                        <span className="text-amber-400">0 — orphaned</span>
+                        <span className="font-semibold text-amber-600">0 — orphaned</span>
                       ) : (
                         <ul className="space-y-0.5">
                           {orgMembers.map((member) => (
-                            <li key={member.id} className="text-slate-300">
+                            <li key={member.id} className="text-slate-700">
                               {member.email ?? "—"}
                               {member.full_name && (
                                 <span className="text-slate-500"> ({member.full_name})</span>

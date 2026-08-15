@@ -27,7 +27,7 @@ export function ApplicationForm({ action }: { action: (formData: FormData) => vo
         </div>
       </div>
 
-      <div className="border-t border-slate-800 pt-5">
+      <div className="border-t border-slate-200 pt-5">
         <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
           What contract are you requesting?
         </p>
