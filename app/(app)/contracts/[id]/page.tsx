@@ -4,7 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { ContractStatusBadge } from "@/components/StatusBadge";
 import { deleteContract, updateContract } from "@/app/(app)/contracts/actions";
-import { deleteContractDocument, uploadContractDocument } from "@/app/(app)/contracts/documents-actions";
+import {
+  deleteContractDocument,
+  replaceContractDocument,
+  uploadContractDocument,
+} from "@/app/(app)/contracts/documents-actions";
 import { formatBytes, formatDate, formatDateTime } from "@/lib/format";
 import { getDocumentPublicUrl } from "@/lib/storage";
 import {
@@ -61,7 +65,10 @@ export default async function ContractDetailPage({
 
   const typedContract = contract as Contract & { vendors: Vendor | null };
   const typedVendors = (vendors ?? []) as Pick<Vendor, "id" | "name" | "vendor_code">[];
-  const typedDocuments = (documents as ContractDocument[] | null) ?? [];
+  const allDocuments = (documents as ContractDocument[] | null) ?? [];
+  const typedDocuments = allDocuments.filter((doc) => !doc.superseded_at);
+  const supersededDocuments = allDocuments.filter((doc) => doc.superseded_at);
+  const documentById = new Map(allDocuments.map((doc) => [doc.id, doc]));
 
   const updateContractWithId = updateContract.bind(null, id);
   const deleteContractWithId = deleteContract.bind(null, typedContract.vendor_id, id);
@@ -244,6 +251,7 @@ export default async function ContractDetailPage({
             <tbody>
               {typedDocuments.map((doc) => {
                 const deleteDoc = deleteContractDocument.bind(null, id, doc.id, doc.file_path);
+                const replaceDoc = replaceContractDocument.bind(null, id, doc.id);
                 return (
                   <tr key={doc.id} className="border-t border-slate-200 hover:bg-slate-50">
                     <td className="px-4 py-3">
@@ -262,7 +270,18 @@ export default async function ContractDetailPage({
                     <td className="px-4 py-3 text-slate-500">{formatBytes(doc.file_size)}</td>
                     <td className="px-4 py-3 text-slate-500">{formatDateTime(doc.uploaded_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <form action={deleteDoc}>
+                      <details className="inline-block text-left">
+                        <summary className="cursor-pointer text-xs font-medium text-teal-600 hover:underline">
+                          Replace
+                        </summary>
+                        <form action={replaceDoc} className="mt-2 flex items-center gap-2">
+                          <input type="file" name="file" required className="text-xs text-slate-700" />
+                          <button type="submit" className="rounded-md bg-teal-600 px-2 py-1 text-xs font-semibold text-white hover:bg-teal-700">
+                            Upload
+                          </button>
+                        </form>
+                      </details>
+                      <form action={deleteDoc} className="mt-1">
                         <ConfirmSubmitButton confirmMessage="Delete this document?" className="text-xs font-medium text-red-600 hover:underline">
                           Delete
                         </ConfirmSubmitButton>
@@ -308,6 +327,35 @@ export default async function ContractDetailPage({
             Add document
           </button>
         </form>
+
+        {supersededDocuments.length > 0 && (
+          <details className="border-t border-slate-200 px-6 py-4">
+            <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Document history ({supersededDocuments.length} superseded)
+            </summary>
+            <ul className="mt-3 space-y-2 text-sm">
+              {supersededDocuments.map((doc) => {
+                const replacement = doc.superseded_by_id ? documentById.get(doc.superseded_by_id) : null;
+                return (
+                  <li key={doc.id} className="flex flex-wrap items-center gap-2 text-slate-600">
+                    <a
+                      href={getDocumentPublicUrl(doc.file_path)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-slate-500 line-through hover:underline"
+                    >
+                      {doc.file_name}
+                    </a>
+                    <span className="text-xs text-slate-400">
+                      superseded {formatDateTime(doc.superseded_at)}
+                      {replacement ? ` by ${replacement.file_name}` : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        )}
       </div>
 
       <form action={deleteContractWithId}>
