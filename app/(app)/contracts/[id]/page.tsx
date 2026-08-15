@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { sweepExpiredContracts } from "@/lib/contracts";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { ContractStatusBadge } from "@/components/StatusBadge";
 import { deleteContract, updateContract } from "@/app/(app)/contracts/actions";
+import { renewContract, recordAmendment, terminateContract } from "@/app/(app)/contracts/lifecycle-actions";
 import {
   deleteContractDocument,
   replaceContractDocument,
@@ -15,8 +17,10 @@ import {
   CONTRACT_STATUSES,
   DOCUMENT_TYPES,
   isExpiringSoon,
+  isInForce,
   type Contract,
   type ContractDocument,
+  type ContractEvent,
   type Vendor,
 } from "@/lib/types";
 import {
@@ -41,6 +45,7 @@ export default async function ContractDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  await sweepExpiredContracts(supabase);
 
   const { data: contract } = await supabase
     .from("contracts")
@@ -63,18 +68,29 @@ export default async function ContractDetailPage({
     .eq("contract_id", id)
     .order("uploaded_at", { ascending: false });
 
+  const { data: events } = await supabase
+    .from("contract_events")
+    .select("*")
+    .eq("contract_id", id)
+    .order("created_at", { ascending: false });
+
   const typedContract = contract as Contract & { vendors: Vendor | null };
   const typedVendors = (vendors ?? []) as Pick<Vendor, "id" | "name" | "vendor_code">[];
   const allDocuments = (documents as ContractDocument[] | null) ?? [];
   const typedDocuments = allDocuments.filter((doc) => !doc.superseded_at);
   const supersededDocuments = allDocuments.filter((doc) => doc.superseded_at);
   const documentById = new Map(allDocuments.map((doc) => [doc.id, doc]));
+  const typedEvents = (events as ContractEvent[] | null) ?? [];
 
   const updateContractWithId = updateContract.bind(null, id);
   const deleteContractWithId = deleteContract.bind(null, typedContract.vendor_id, id);
   const uploadDocumentWithId = uploadContractDocument.bind(null, id);
+  const renewContractWithId = renewContract.bind(null, id);
+  const recordAmendmentWithId = recordAmendment.bind(null, id);
+  const terminateContractWithId = terminateContract.bind(null, id);
 
-  const expiring = typedContract.status === "active" && isExpiringSoon(typedContract.end_date);
+  const inForce = isInForce(typedContract.status);
+  const expiring = inForce && isExpiringSoon(typedContract.end_date);
 
   return (
     <div className="space-y-8">
@@ -123,6 +139,74 @@ export default async function ContractDetailPage({
             </span>
           }
         />
+      </div>
+
+      {typedContract.status === "terminated" && (
+        <div className={`${panel} border-red-200 bg-red-50 p-4`}>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-red-600">Terminated</p>
+          <p className="mt-1 text-sm text-red-800">
+            {formatDate(typedContract.terminated_at?.slice(0, 10) ?? null)}
+            {typedContract.terminated_by ? ` · by ${typedContract.terminated_by}` : ""}
+          </p>
+          {typedContract.termination_reason && (
+            <p className="mt-1 text-sm text-red-800">{typedContract.termination_reason}</p>
+          )}
+        </div>
+      )}
+
+      <div className={panel}>
+        <div className={panelHeader}>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Lifecycle actions</h2>
+        </div>
+        <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="p-5">
+            <p className="text-sm font-semibold text-slate-900">Renew</p>
+            <p className="mt-0.5 text-xs text-slate-500">Extend the term and put the contract back in force.</p>
+            {inForce ? (
+              <form action={renewContractWithId} className="mt-3 space-y-2">
+                <input type="date" name="new_end_date" required className={`${input} mt-0`} />
+                <input type="number" step="0.01" name="new_value" placeholder="New value (optional)" className={`${input} mt-0`} />
+                <button type="submit" className={`${primaryButton} w-full`}>
+                  Renew contract
+                </button>
+              </form>
+            ) : (
+              <p className="mt-3 text-xs text-slate-400">Not available — contract is {typedContract.status}.</p>
+            )}
+          </div>
+
+          <div className="p-5">
+            <p className="text-sm font-semibold text-slate-900">Record amendment</p>
+            <p className="mt-0.5 text-xs text-slate-500">Log a change to terms, value, or end date.</p>
+            <form action={recordAmendmentWithId} className="mt-3 space-y-2">
+              <textarea name="amendment_summary" required rows={2} placeholder="What changed?" className={`${input} mt-0`} />
+              <input type="number" step="0.01" name="new_value" placeholder="New value (optional)" className={`${input} mt-0`} />
+              <input type="date" name="new_end_date" placeholder="New end date (optional)" className={`${input} mt-0`} />
+              <button type="submit" className={`${secondaryButton} w-full`}>
+                Save amendment
+              </button>
+            </form>
+          </div>
+
+          <div className="p-5">
+            <p className="text-sm font-semibold text-slate-900">Terminate</p>
+            <p className="mt-0.5 text-xs text-slate-500">Close the contract out for cause.</p>
+            {typedContract.status !== "terminated" ? (
+              <form action={terminateContractWithId} className="mt-3 space-y-2">
+                <textarea name="termination_reason" required rows={2} placeholder="Reason (required)" className={`${input} mt-0`} />
+                <input name="terminated_by" placeholder="Authorized by" className={`${input} mt-0`} />
+                <ConfirmSubmitButton
+                  confirmMessage="Terminate this contract? This cannot be undone."
+                  className="w-full rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
+                >
+                  Terminate contract
+                </ConfirmSubmitButton>
+              </form>
+            ) : (
+              <p className="mt-3 text-xs text-slate-400">Already terminated.</p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className={panel}>
@@ -356,6 +440,29 @@ export default async function ContractDetailPage({
             </ul>
           </details>
         )}
+      </div>
+
+      <div className={panel}>
+        <div className={panelHeader}>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Activity log ({typedEvents.length})
+          </h2>
+        </div>
+        <ul className="divide-y divide-slate-100">
+          {typedEvents.map((event) => (
+            <li key={event.id} className="px-6 py-3">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm font-medium text-slate-900">{event.summary}</p>
+                <p className="shrink-0 text-xs text-slate-400">{formatDateTime(event.created_at)}</p>
+              </div>
+              {event.detail && <p className="mt-0.5 text-xs text-slate-500">{event.detail}</p>}
+              {event.actor_name && <p className="mt-0.5 text-xs text-slate-400">by {event.actor_name}</p>}
+            </li>
+          ))}
+          {typedEvents.length === 0 && (
+            <li className="px-6 py-8 text-center text-sm text-slate-500">No activity recorded yet.</li>
+          )}
+        </ul>
       </div>
 
       <form action={deleteContractWithId}>

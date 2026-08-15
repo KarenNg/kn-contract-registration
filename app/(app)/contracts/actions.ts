@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { logContractEvent } from "@/lib/contracts";
+import { isInForce, type ContractStatus } from "@/lib/types";
 
 function fromFormData(formData: FormData) {
   const rawValue = String(formData.get("value") ?? "").trim();
@@ -28,6 +30,9 @@ export async function createContract(formData: FormData) {
   if (!values.title || !values.vendor_id) {
     throw new Error("Contract title and vendor are required");
   }
+  if (isInForce(values.status as ContractStatus) && !values.end_date) {
+    throw new Error("An end date is required before a contract can go active");
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -40,6 +45,8 @@ export async function createContract(formData: FormData) {
     throw new Error(error.message);
   }
 
+  await logContractEvent(supabase, data.id, "created", "Contract created", `Status: ${values.status}`);
+
   revalidatePath("/contracts");
   revalidatePath(`/vendors/${values.vendor_id}`);
   revalidatePath("/");
@@ -51,8 +58,18 @@ export async function updateContract(contractId: string, formData: FormData) {
   if (!values.title || !values.vendor_id) {
     throw new Error("Contract title and vendor are required");
   }
+  if (isInForce(values.status as ContractStatus) && !values.end_date) {
+    throw new Error("An end date is required before a contract can go active");
+  }
 
   const supabase = await createClient();
+
+  const { data: previous } = await supabase
+    .from("contracts")
+    .select("status")
+    .eq("id", contractId)
+    .single();
+
   const { error } = await supabase
     .from("contracts")
     .update(values)
@@ -60,6 +77,15 @@ export async function updateContract(contractId: string, formData: FormData) {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (previous && previous.status !== values.status) {
+    await logContractEvent(
+      supabase,
+      contractId,
+      "status_changed",
+      `Status changed: ${previous.status} → ${values.status}`,
+    );
   }
 
   revalidatePath("/contracts");
