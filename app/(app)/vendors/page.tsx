@@ -26,8 +26,8 @@ export default async function VendorsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-400">Vendors</h1>
-          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">
+          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Vendors</h1>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
             All registered vendors and their contract counts.
           </p>
         </div>
@@ -55,7 +55,7 @@ export default async function VendorsPage() {
                 <tr key={vendor.id} className={tr}>
                   <td className={`px-4 py-3 ${code}`}>{vendor.vendor_code}</td>
                   <td className="px-4 py-3">
-                    <Link href={`/vendors/${vendor.id}`} className="font-medium text-slate-100 hover:text-teal-400">
+                    <Link href={`/vendors/${vendor.id}`} className="font-medium text-slate-900 hover:text-teal-700">
                       {vendor.name}
                     </Link>
                   </td>

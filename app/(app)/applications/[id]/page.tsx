@@ -57,7 +57,7 @@ export default async function ApplicationDetailPage({
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/applications" className="text-sm text-slate-400 hover:text-teal-400">
+        <Link href="/applications" className="text-sm text-slate-500 hover:text-teal-700">
           ← All applications
         </Link>
       </div>
@@ -65,7 +65,7 @@ export default async function ApplicationDetailPage({
       <div className="flex items-start justify-between">
         <div>
           <p className={code}>{typed.application_code}</p>
-          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-100">
+          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900">
             {typed.company_name}
           </h1>
           <div className="mt-2">
@@ -84,7 +84,7 @@ export default async function ApplicationDetailPage({
 
       <div className={panel}>
         <div className={panelHeader}>
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
             Requested contract
           </h2>
         </div>
@@ -104,7 +104,7 @@ export default async function ApplicationDetailPage({
       {isDecided ? (
         <div className={panel}>
           <div className={panelHeader}>
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Decision</h2>
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Decision</h2>
           </div>
           <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2">
             <Field label="Decided" value={formatDateTime(typed.decided_at)} />
@@ -129,7 +129,7 @@ export default async function ApplicationDetailPage({
       ) : (
         <div className={panel}>
           <div className={panelHeader}>
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Review</h2>
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Review</h2>
           </div>
           <div className="space-y-6 p-6">
             {typed.status === "submitted" && (
@@ -141,8 +141,8 @@ export default async function ApplicationDetailPage({
             )}
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <form action={approveApplicationWithId} className="space-y-3 rounded-md border border-emerald-900/50 bg-emerald-950/20 p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+              <form action={approveApplicationWithId} className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
                   Approve → creates vendor + draft contract
                 </p>
                 <div>
@@ -158,8 +158,8 @@ export default async function ApplicationDetailPage({
                 </button>
               </form>
 
-              <form action={rejectApplicationWithId} className="space-y-3 rounded-md border border-red-900/50 bg-red-950/20 p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-red-400">Reject</p>
+              <form action={rejectApplicationWithId} className="space-y-3 rounded-md border border-red-300 bg-red-50 p-4">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-red-600">Reject</p>
                 <div>
                   <label className={label}>Reviewer name</label>
                   <input name="reviewer_name" className={input} />
@@ -170,7 +170,7 @@ export default async function ApplicationDetailPage({
                 </div>
                 <button
                   type="submit"
-                  className="rounded-md border border-red-700 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-900/40"
+                  className="rounded-md border border-red-600 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
                 >
                   Reject application
                 </button>
@@ -193,7 +193,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-0.5 text-sm text-slate-200">{value ?? "—"}</p>
+      <p className="mt-0.5 text-sm text-slate-800">{value ?? "—"}</p>
     </div>
   );
 }

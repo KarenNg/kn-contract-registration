@@ -56,7 +56,7 @@ export default async function VendorDetailPage({
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/vendors" className="text-sm text-slate-400 hover:text-teal-400">
+        <Link href="/vendors" className="text-sm text-slate-500 hover:text-teal-700">
           ← All vendors
         </Link>
       </div>
@@ -66,7 +66,7 @@ export default async function VendorDetailPage({
       <div className="flex items-start justify-between">
         <div>
           <p className={code}>{(vendor as Vendor).vendor_code}</p>
-          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-100">
+          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900">
             {(vendor as Vendor).name}
           </h1>
           <div className="mt-2">
@@ -111,7 +111,7 @@ export default async function VendorDetailPage({
                   return (
                     <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                       <td className="px-4 py-3">
-                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-100 hover:text-teal-400">
+                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-700">
                           {contract.title}
                         </Link>
                         <span className={`ml-2 ${code}`}>{contract.contract_code}</span>
@@ -143,7 +143,7 @@ export default async function VendorDetailPage({
       </section>
 
       <details className={`p-6 ${panel}`}>
-        <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-400">
+        <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-500">
           Edit vendor
         </summary>
         <div className="mt-4 max-w-2xl">
@@ -164,7 +164,7 @@ function Field({ label, value }: { label: string; value: string | null }) {
   return (
     <div>
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-0.5 text-sm text-slate-200">{value ?? "—"}</p>
+      <p className="mt-0.5 text-sm text-slate-800">{value ?? "—"}</p>
     </div>
   );
 }

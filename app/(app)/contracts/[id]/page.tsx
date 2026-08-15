@@ -72,7 +72,7 @@ export default async function ContractDetailPage({
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/contracts" className="text-sm text-slate-400 hover:text-teal-400">
+        <Link href="/contracts" className="text-sm text-slate-500 hover:text-teal-700">
           ← All contracts
         </Link>
       </div>
@@ -80,7 +80,7 @@ export default async function ContractDetailPage({
       <div className="flex items-start justify-between">
         <div>
           <p className={code}>{typedContract.contract_code}</p>
-          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-100">
+          <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900">
             {typedContract.title}
           </h1>
           <div className="mt-2">
@@ -95,7 +95,7 @@ export default async function ContractDetailPage({
           label="Vendor"
           value={
             typedContract.vendors ? (
-              <Link href={`/vendors/${typedContract.vendors.id}`} className="hover:text-teal-400">
+              <Link href={`/vendors/${typedContract.vendors.id}`} className="hover:text-teal-700">
                 {typedContract.vendors.name} ({typedContract.vendors.vendor_code})
               </Link>
             ) : (
@@ -109,7 +109,7 @@ export default async function ContractDetailPage({
             <span className="flex items-center gap-2">
               {formatDate(typedContract.end_date)}
               {expiring && (
-                <span className="rounded-full bg-amber-400/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-400">
+                <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
                   ⚠ Expiring soon
                 </span>
               )}
@@ -120,7 +120,7 @@ export default async function ContractDetailPage({
 
       <div className={panel}>
         <div className={panelHeader}>
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Contract details</h2>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Contract details</h2>
         </div>
 
         <form action={updateContractWithId} className="space-y-4 px-6 py-6">
@@ -186,12 +186,12 @@ export default async function ContractDetailPage({
 
           <div className={row}>
             <label className={label}>Auto-renews</label>
-            <label className="flex items-center gap-2 text-sm text-slate-200">
+            <label className="flex items-center gap-2 text-sm text-slate-800">
               <input
                 type="checkbox"
                 name="auto_renew"
                 defaultChecked={typedContract.auto_renew}
-                className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-teal-500 focus:ring-teal-500"
+                className="h-4 w-4 rounded border-slate-300 bg-white text-teal-500 focus:ring-teal-500"
               />
               Yes
             </label>
@@ -212,7 +212,7 @@ export default async function ContractDetailPage({
             <textarea name="notes" rows={2} defaultValue={typedContract.notes ?? ""} className={input} />
           </div>
 
-          <div className="-mx-6 -mb-6 mt-6 flex items-center justify-end gap-3 border-t border-slate-800 bg-slate-800/40 px-6 py-4">
+          <div className="-mx-6 -mb-6 mt-6 flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
             <Link href="/contracts" className={secondaryButton}>
               Cancel
             </Link>
@@ -225,7 +225,7 @@ export default async function ContractDetailPage({
 
       <div className={panel}>
         <div className={panelHeader}>
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
             Supporting documents ({typedDocuments.length})
           </h2>
         </div>
@@ -245,25 +245,25 @@ export default async function ContractDetailPage({
               {typedDocuments.map((doc) => {
                 const deleteDoc = deleteContractDocument.bind(null, id, doc.id, doc.file_path);
                 return (
-                  <tr key={doc.id} className="border-t border-slate-800 hover:bg-slate-800/50">
+                  <tr key={doc.id} className="border-t border-slate-200 hover:bg-slate-50">
                     <td className="px-4 py-3">
                       <a
                         href={getDocumentPublicUrl(doc.file_path)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium text-teal-400 hover:underline"
+                        className="font-medium text-teal-600 hover:underline"
                       >
                         {doc.file_name}
                       </a>
                     </td>
-                    <td className="px-4 py-3 capitalize text-slate-300">
+                    <td className="px-4 py-3 capitalize text-slate-700">
                       {doc.document_type.replace(/_/g, " ")}
                     </td>
-                    <td className="px-4 py-3 text-slate-400">{formatBytes(doc.file_size)}</td>
-                    <td className="px-4 py-3 text-slate-400">{formatDateTime(doc.uploaded_at)}</td>
+                    <td className="px-4 py-3 text-slate-500">{formatBytes(doc.file_size)}</td>
+                    <td className="px-4 py-3 text-slate-500">{formatDateTime(doc.uploaded_at)}</td>
                     <td className="px-4 py-3 text-right">
                       <form action={deleteDoc}>
-                        <ConfirmSubmitButton confirmMessage="Delete this document?" className="text-xs font-medium text-red-400 hover:underline">
+                        <ConfirmSubmitButton confirmMessage="Delete this document?" className="text-xs font-medium text-red-600 hover:underline">
                           Delete
                         </ConfirmSubmitButton>
                       </form>
@@ -284,14 +284,14 @@ export default async function ContractDetailPage({
 
         <form
           action={uploadDocumentWithId}
-          className="flex flex-wrap items-end gap-3 border-t border-slate-800 bg-slate-800/40 px-6 py-4"
+          className="flex flex-wrap items-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4"
         >
           <div>
-            <label className="block text-xs font-medium text-slate-400">File</label>
-            <input type="file" name="file" required className="mt-1 text-sm text-slate-200" />
+            <label className="block text-xs font-medium text-slate-500">File</label>
+            <input type="file" name="file" required className="mt-1 text-sm text-slate-800" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-400">Document type</label>
+            <label className="block text-xs font-medium text-slate-500">Document type</label>
             <select name="document_type" className={`${input} mt-1`}>
               {DOCUMENT_TYPES.map((type) => (
                 <option key={type} value={type} className="capitalize">
@@ -301,7 +301,7 @@ export default async function ContractDetailPage({
             </select>
           </div>
           <div className="min-w-[160px] flex-1">
-            <label className="block text-xs font-medium text-slate-400">Notes</label>
+            <label className="block text-xs font-medium text-slate-500">Notes</label>
             <input name="notes" className={`${input} mt-1`} />
           </div>
           <button type="submit" className={primaryButton}>
@@ -323,7 +323,7 @@ function InfoBox({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className={`px-4 py-3 ${panel}`}>
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
-      <p className="mt-0.5 text-sm font-semibold text-slate-100">{value}</p>
+      <p className="mt-0.5 text-sm font-semibold text-slate-900">{value}</p>
     </div>
   );
 }

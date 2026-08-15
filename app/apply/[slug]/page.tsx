@@ -29,14 +29,14 @@ export default async function ApplyPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-6 py-12">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-teal-400">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-teal-600">
           {organization.name}
         </p>
-        <h1 className="text-sm font-bold uppercase tracking-wider text-slate-400">Vendor application</h1>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-100">
+        <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Vendor application</h1>
+        <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
           Tell us about your company and the contract you&apos;re looking for.
         </p>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-slate-500">
           {organization.name}&apos;s contract administrators will review your application. If
           approved, you&apos;ll be registered as a vendor and a draft contract will be opened for
           you.

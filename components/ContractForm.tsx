@@ -88,7 +88,7 @@ export function ContractForm({
               type="checkbox"
               name="auto_renew"
               defaultChecked={contract?.auto_renew ?? false}
-              className="h-4 w-4 rounded border-slate-600 bg-slate-800 text-teal-500 focus:ring-teal-500"
+              className="h-4 w-4 rounded border-slate-300 bg-white text-teal-500 focus:ring-teal-500"
             />
             Auto-renews
           </label>
