@@ -63,6 +63,7 @@ export default async function DashboardPage() {
         <KpiTile
           label="Expiring within 60 days"
           value={expiring.length}
+          href="/alerts"
           warn={expiring.length > 0}
         />
       </div>
@@ -130,9 +131,14 @@ export default async function DashboardPage() {
 
       {expiring.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-red-600">
-            ⚠ Renewal decision needed
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-red-600">
+              ⚠ Renewal decision needed
+            </h2>
+            <Link href="/alerts" className="text-sm font-semibold text-teal-600 hover:text-teal-700">
+              Open alerts →
+            </Link>
+          </div>
           <div className={tableWrap}>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
