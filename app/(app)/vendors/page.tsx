@@ -2,16 +2,23 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { VendorStatusBadge } from "@/components/StatusBadge";
 import type { Vendor } from "@/lib/types";
-import { code, errorBanner, primaryButton, tableWrap, td, th, tr } from "@/components/theme";
+import { code, errorBanner, input, primaryButton, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
 
-export default async function VendorsPage() {
+export default async function VendorsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string }>;
+}) {
+  const { q, status } = await searchParams;
   const supabase = await createClient();
-  const { data: vendors, error } = await supabase
-    .from("vendors")
-    .select("*")
-    .order("created_at", { ascending: false });
+
+  let query = supabase.from("vendors").select("*").order("created_at", { ascending: false });
+  if (status) query = query.eq("status", status);
+  if (q) query = query.or(`name.ilike.%${q}%,vendor_code.ilike.%${q}%,contact_name.ilike.%${q}%,contact_email.ilike.%${q}%`);
+
+  const { data: vendors, error } = await query;
 
   const { data: contractCounts } = await supabase
     .from("contracts")
@@ -34,6 +41,39 @@ export default async function VendorsPage() {
         <Link href="/vendors/new" className={primaryButton}>
           + New vendor
         </Link>
+      </div>
+
+      <form className="flex flex-wrap items-center gap-3" action="/vendors">
+        <input
+          type="search"
+          name="q"
+          defaultValue={q ?? ""}
+          placeholder="Search name, vendor ID, contact…"
+          className={`${input} mt-0 max-w-xs`}
+        />
+        {status && <input type="hidden" name="status" value={status} />}
+        <button type="submit" className={primaryButton}>
+          Search
+        </button>
+        {(q || status) && (
+          <Link href="/vendors" className="text-sm text-slate-500 hover:text-teal-700">
+            Clear
+          </Link>
+        )}
+      </form>
+
+      <div className="flex flex-wrap gap-2 text-sm">
+        <FilterLink label="All" active={!status} href={q ? `/vendors?q=${encodeURIComponent(q)}` : "/vendors"} />
+        <FilterLink
+          label="Active"
+          active={status === "active"}
+          href={`/vendors?status=active${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+        />
+        <FilterLink
+          label="Inactive"
+          active={status === "inactive"}
+          href={`/vendors?status=inactive${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+        />
       </div>
 
       {error && <p className={errorBanner}>{error.message}</p>}
@@ -69,7 +109,17 @@ export default async function VendorsPage() {
               {vendors?.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
-                    No vendors yet. Create your first one.
+                    {q || status ? (
+                      "No vendors match this search."
+                    ) : (
+                      <>
+                        No vendors yet.{" "}
+                        <Link href="/vendors/new" className="text-teal-600 hover:underline">
+                          Create your first one
+                        </Link>
+                        .
+                      </>
+                    )}
                   </td>
                 </tr>
               )}
@@ -78,5 +128,28 @@ export default async function VendorsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function FilterLink({
+  label,
+  href,
+  active,
+}: {
+  label: string;
+  href: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`rounded-full px-3 py-1 ${
+        active
+          ? "bg-teal-600 text-white"
+          : "border border-slate-300 bg-white text-slate-500 hover:text-slate-900"
+      }`}
+    >
+      {label}
+    </Link>
   );
 }

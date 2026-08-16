@@ -51,8 +51,33 @@ export interface Contract {
   auto_renew: boolean;
   renewal_terms: string | null;
   notes: string | null;
+  terminated_at: string | null;
+  termination_reason: string | null;
+  terminated_by: string | null;
+  alert_acknowledged_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export type ContractEventType =
+  | "created"
+  | "amended"
+  | "renewed"
+  | "terminated"
+  | "reactivated"
+  | "document_uploaded"
+  | "document_superseded"
+  | "status_changed"
+  | "alert_acknowledged";
+
+export interface ContractEvent {
+  id: string;
+  contract_id: string;
+  event_type: ContractEventType;
+  summary: string;
+  detail: string | null;
+  actor_name: string | null;
+  created_at: string;
 }
 
 export interface ContractWithVendor extends Contract {
@@ -92,6 +117,8 @@ export interface ContractDocument {
   document_type: DocumentType;
   notes: string | null;
   uploaded_at: string;
+  superseded_at: string | null;
+  superseded_by_id: string | null;
 }
 
 export const CONTRACT_STATUSES: ContractStatus[] = [
@@ -129,4 +156,14 @@ export function isExpiringSoon(endDate: string | null, days = 60): boolean {
 export function isPastEndDate(endDate: string | null): boolean {
   if (!endDate) return false;
   return new Date(endDate).getTime() < new Date().getTime();
+}
+
+/** Contracts still in force — the ones a renewal or termination decision applies to. */
+export function isInForce(status: ContractStatus): boolean {
+  return status === "active" || status === "renewed";
+}
+
+/** Terminated/expired — no longer live, kept for the record. */
+export function isClosed(status: ContractStatus): boolean {
+  return status === "terminated" || status === "expired";
 }

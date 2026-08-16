@@ -9,6 +9,7 @@ const LINKS = [
   { href: "/vendors", label: "Vendors" },
   { href: "/contracts", label: "Contracts" },
   { href: "/applications", label: "Applications" },
+  { href: "/alerts", label: "Alerts" },
 ];
 
 export function Nav({
@@ -16,11 +17,13 @@ export function Nav({
   organizationSlug,
   email,
   isPlatformAdmin,
+  alertCount,
 }: {
   organizationName: string;
   organizationSlug: string;
   email: string | null;
   isPlatformAdmin: boolean;
+  alertCount?: number;
 }) {
   const pathname = usePathname();
 
@@ -42,13 +45,18 @@ export function Nav({
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-md px-3 py-1.5 transition-colors ${
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 transition-colors ${
                   active
                     ? "bg-white/15 text-white"
                     : "text-indigo-200 hover:text-white"
                 }`}
               >
                 {link.label}
+                {link.href === "/alerts" && !!alertCount && (
+                  <span className="rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-extrabold text-white">
+                    {alertCount}
+                  </span>
+                )}
               </Link>
             );
           })}

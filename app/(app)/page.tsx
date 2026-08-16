@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
+import { sweepExpiredContracts } from "@/lib/contracts";
 import { ApplicationStatusBadge, ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
-import { isExpiringSoon, type ContractWithVendor, type VendorApplication } from "@/lib/types";
+import { isExpiringSoon, isInForce, type ContractWithVendor, type VendorApplication } from "@/lib/types";
 import { code, panel, panelHeader, severityStripe, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export default async function DashboardPage() {
   const profile = await requireProfile();
   const applyHref = `/apply/${profile.organizationSlug}`;
   const supabase = await createClient();
+  await sweepExpiredContracts(supabase);
 
   const [
     { count: vendorCount },
@@ -35,7 +37,7 @@ export default async function DashboardPage() {
 
   const allContracts = (contracts as ContractWithVendor[] | null) ?? [];
   const expiring = allContracts.filter(
-    (c) => c.status === "active" && isExpiringSoon(c.end_date),
+    (c) => isInForce(c.status) && isExpiringSoon(c.end_date),
   );
 
   const allApplications = (applications as VendorApplication[] | null) ?? [];
@@ -61,6 +63,7 @@ export default async function DashboardPage() {
         <KpiTile
           label="Expiring within 60 days"
           value={expiring.length}
+          href="/alerts"
           warn={expiring.length > 0}
         />
       </div>
@@ -128,9 +131,14 @@ export default async function DashboardPage() {
 
       {expiring.length > 0 && (
         <section className="space-y-3">
-          <h2 className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-red-600">
-            ⚠ Renewal decision needed
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-red-600">
+              ⚠ Renewal decision needed
+            </h2>
+            <Link href="/alerts" className="text-sm font-semibold text-teal-600 hover:text-teal-700">
+              Open alerts →
+            </Link>
+          </div>
           <div className={tableWrap}>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
@@ -194,7 +202,7 @@ export default async function DashboardPage() {
               </thead>
               <tbody>
                 {allContracts.map((contract) => {
-                  const soon = contract.status === "active" && isExpiringSoon(contract.end_date);
+                  const soon = isInForce(contract.status) && isExpiringSoon(contract.end_date);
                   return (
                     <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                       <td className="px-4 py-3">

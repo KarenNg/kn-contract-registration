@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { sweepExpiredContracts } from "@/lib/contracts";
 import { VendorForm } from "@/components/VendorForm";
 import { ContractStatusBadge, ExpiringBadge, VendorStatusBadge } from "@/components/StatusBadge";
 import { deleteVendor, updateVendor } from "@/app/(app)/vendors/actions";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { isExpiringSoon, type Contract, type Vendor } from "@/lib/types";
+import { isExpiringSoon, isInForce, type Contract, type Vendor } from "@/lib/types";
 import {
   code,
   dangerLink,
@@ -32,6 +33,7 @@ export default async function VendorDetailPage({
   const { id } = await params;
   const { error: errorMessage } = await searchParams;
   const supabase = await createClient();
+  await sweepExpiredContracts(supabase);
 
   const { data: vendor } = await supabase
     .from("vendors")
@@ -107,7 +109,7 @@ export default async function VendorDetailPage({
               </thead>
               <tbody>
                 {typedContracts.map((contract) => {
-                  const soon = contract.status === "active" && isExpiringSoon(contract.end_date);
+                  const soon = isInForce(contract.status) && isExpiringSoon(contract.end_date);
                   return (
                     <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                       <td className="px-4 py-3">
