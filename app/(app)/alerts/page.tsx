@@ -98,14 +98,14 @@ export default async function AlertsPage() {
                           <ContractStatusBadge status={contract.status} />
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Link href={`/contracts/${contract.id}`} className={secondaryButton}>
+                          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+                            <Link href={`/contracts/${contract.id}`} className={`${secondaryButton} text-center`}>
                               Decide
                             </Link>
                             <form action={acknowledge}>
                               <ConfirmSubmitButton
                                 confirmMessage="Acknowledge this alert? It'll drop off this list until the situation changes."
-                                className={primaryButton}
+                                className={`${primaryButton} w-full`}
                               >
                                 Acknowledge
                               </ConfirmSubmitButton>
@@ -130,7 +130,7 @@ export default async function AlertsPage() {
           <div className={`${panelHeader} mt-4 rounded-md`}>
             <ul className="divide-y divide-slate-200">
               {acknowledged.map((contract) => (
-                <li key={contract.id} className="flex items-center justify-between px-2 py-2 text-sm">
+                <li key={contract.id} className="flex flex-col gap-0.5 px-2 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                   <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-700">
                     {contract.title}
                   </Link>

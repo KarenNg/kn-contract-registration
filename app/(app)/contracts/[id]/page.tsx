@@ -303,7 +303,7 @@ export default async function ContractDetailPage({
             <textarea name="notes" rows={2} defaultValue={typedContract.notes ?? ""} className={input} />
           </div>
 
-          <div className="-mx-6 -mb-6 mt-6 flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <div className="-mx-6 -mb-6 mt-6 flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
             <Link href="/contracts" className={secondaryButton}>
               Cancel
             </Link>
@@ -354,22 +354,24 @@ export default async function ContractDetailPage({
                     <td className="px-4 py-3 text-slate-500">{formatBytes(doc.file_size)}</td>
                     <td className="px-4 py-3 text-slate-500">{formatDateTime(doc.uploaded_at)}</td>
                     <td className="px-4 py-3 text-right">
-                      <details className="inline-block text-left">
-                        <summary className="cursor-pointer text-xs font-medium text-blue-600 hover:underline">
-                          Replace
-                        </summary>
-                        <form action={replaceDoc} className="mt-2 flex items-center gap-2">
-                          <input type="file" name="file" required className="text-xs text-slate-700" />
-                          <button type="submit" className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700">
-                            Upload
-                          </button>
+                      <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+                        <details className="text-left">
+                          <summary className="cursor-pointer px-1 py-1 text-xs font-medium text-blue-600 hover:underline">
+                            Replace
+                          </summary>
+                          <form action={replaceDoc} className="mt-2 flex items-center gap-2">
+                            <input type="file" name="file" required className="text-xs text-slate-700" />
+                            <button type="submit" className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700">
+                              Upload
+                            </button>
+                          </form>
+                        </details>
+                        <form action={deleteDoc}>
+                          <ConfirmSubmitButton confirmMessage="Delete this document?" className="px-1 py-1 text-xs font-medium text-red-600 hover:underline">
+                            Delete
+                          </ConfirmSubmitButton>
                         </form>
-                      </details>
-                      <form action={deleteDoc} className="mt-1">
-                        <ConfirmSubmitButton confirmMessage="Delete this document?" className="text-xs font-medium text-red-600 hover:underline">
-                          Delete
-                        </ConfirmSubmitButton>
-                      </form>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -451,7 +453,7 @@ export default async function ContractDetailPage({
         <ul className="divide-y divide-slate-100">
           {typedEvents.map((event) => (
             <li key={event.id} className="px-6 py-3">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <p className="text-sm font-medium text-slate-900">{event.summary}</p>
                 <p className="shrink-0 text-xs text-slate-400">{formatDateTime(event.created_at)}</p>
               </div>

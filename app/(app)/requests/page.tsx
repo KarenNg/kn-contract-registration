@@ -22,7 +22,7 @@ export default async function RequestsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Requests</h1>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
@@ -32,7 +32,7 @@ export default async function RequestsPage() {
             <p className="mt-1 text-sm font-semibold text-red-600">{pending} awaiting your review</p>
           )}
         </div>
-        <Link href={applyHref} className={secondaryButton}>
+        <Link href={applyHref} className={`${secondaryButton} self-start`}>
           View public application form ↗
         </Link>
       </div>
@@ -44,18 +44,18 @@ export default async function RequestsPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr>
-                <th className={th}>Reference</th>
+                <th className={`${th} hidden sm:table-cell`}>Reference</th>
                 <th className={th}>Company</th>
                 <th className={th}>Requested contract</th>
                 <th className={th}>Est. value</th>
-                <th className={th}>Submitted</th>
+                <th className={`${th} hidden sm:table-cell`}>Submitted</th>
                 <th className={th}>Status</th>
               </tr>
             </thead>
             <tbody>
               {typed.map((application) => (
                 <tr key={application.id} className={tr}>
-                  <td className={`px-4 py-3 ${code}`}>{application.application_code}</td>
+                  <td className={`px-4 py-3 ${code} hidden sm:table-cell`}>{application.application_code}</td>
                   <td className="px-4 py-3">
                     <Link
                       href={`/requests/${application.id}`}
@@ -66,7 +66,7 @@ export default async function RequestsPage() {
                   </td>
                   <td className={td}>{application.requested_contract_title}</td>
                   <td className={td}>{formatCurrency(application.requested_value, "USD")}</td>
-                  <td className={td}>{formatDateTime(application.created_at)}</td>
+                  <td className={`${td} hidden sm:table-cell`}>{formatDateTime(application.created_at)}</td>
                   <td className="px-4 py-3">
                     <ApplicationStatusBadge status={application.status} />
                   </td>
