@@ -3,3 +3,18 @@
 @theme inline {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.animate-flicker {
+  animation: flicker 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flicker {
+    animation: none;
+  }
+}
