@@ -8,7 +8,7 @@ import { code, errorBanner, secondaryButton, tableWrap, td, th, tr } from "@/com
 
 export const dynamic = "force-dynamic";
 
-export default async function ApplicationsPage() {
+export default async function RequestsPage() {
   const profile = await requireProfile();
   const applyHref = `/apply/${profile.organizationSlug}`;
   const supabase = await createClient();
@@ -24,7 +24,7 @@ export default async function ApplicationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Applications</h1>
+          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Requests</h1>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
             Customer journey: intake, review, and approval into a registered vendor.
           </p>
@@ -58,7 +58,7 @@ export default async function ApplicationsPage() {
                   <td className={`px-4 py-3 ${code}`}>{application.application_code}</td>
                   <td className="px-4 py-3">
                     <Link
-                      href={`/applications/${application.id}`}
+                      href={`/requests/${application.id}`}
                       className="font-medium text-slate-900 hover:text-blue-700"
                     >
                       {application.company_name}
@@ -75,7 +75,7 @@ export default async function ApplicationsPage() {
               {typed.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                    No applications yet.{" "}
+                    No requests yet.{" "}
                     <Link href={applyHref} className="text-blue-600 hover:underline">
                       Submit one
                     </Link>

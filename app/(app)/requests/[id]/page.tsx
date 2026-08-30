@@ -8,7 +8,7 @@ import {
   deleteApplication,
   markUnderReview,
   rejectApplication,
-} from "@/app/(app)/applications/actions";
+} from "@/app/(app)/requests/actions";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import type { VendorApplication } from "@/lib/types";
 import {
@@ -57,8 +57,8 @@ export default async function ApplicationDetailPage({
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/applications" className="text-sm text-slate-500 hover:text-blue-700">
-          ← All applications
+        <Link href="/requests" className="text-sm text-slate-500 hover:text-blue-700">
+          ← All requests
         </Link>
       </div>
 

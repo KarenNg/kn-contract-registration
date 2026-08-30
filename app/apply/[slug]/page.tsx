@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { ApplicationForm } from "@/components/ApplicationForm";
-import { submitApplication } from "@/app/(app)/applications/actions";
+import { submitApplication } from "@/app/(app)/requests/actions";
 import { createClient } from "@/lib/supabase/server";
 import { panel } from "@/components/theme";
 

@@ -79,7 +79,7 @@ export default async function PlatformAdminPage() {
                 <th className={th}>Members</th>
                 <th className={th}>Vendors</th>
                 <th className={th}>Contracts</th>
-                <th className={th}>Applications</th>
+                <th className={th}>Requests</th>
                 <th className={th}>Signed up</th>
               </tr>
             </thead>
