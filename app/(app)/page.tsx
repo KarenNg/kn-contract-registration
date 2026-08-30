@@ -70,9 +70,9 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <KpiTile
-          label="Applications pending review"
+          label="Requests pending review"
           value={pendingApplications.length}
-          href="/applications"
+          href="/requests"
           warn={pendingApplications.length > 0}
         />
         <Link
@@ -89,7 +89,7 @@ export default async function DashboardPage() {
       {pendingApplications.length > 0 && (
         <section className="space-y-3">
           <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-sky-600">
-            New vendor applications
+            New vendor requests
           </h2>
           <div className={tableWrap}>
             <div className="overflow-x-auto">
@@ -109,7 +109,7 @@ export default async function DashboardPage() {
                       <td className={`px-4 py-3 ${code}`}>{application.application_code}</td>
                       <td className="px-4 py-3">
                         <Link
-                          href={`/applications/${application.id}`}
+                          href={`/requests/${application.id}`}
                           className="font-medium text-slate-900 hover:text-blue-600"
                         >
                           {application.company_name}

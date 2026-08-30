@@ -46,7 +46,7 @@ export async function submitApplication(organizationSlug: string, formData: Form
     throw new Error(error.message);
   }
 
-  revalidatePath("/applications");
+  revalidatePath("/requests");
   revalidatePath("/");
   redirect(`/apply/thank-you?code=${encodeURIComponent(data.application_code)}`);
 }
@@ -62,8 +62,8 @@ export async function markUnderReview(applicationId: string) {
     throw new Error(error.message);
   }
 
-  revalidatePath("/applications");
-  revalidatePath(`/applications/${applicationId}`);
+  revalidatePath("/requests");
+  revalidatePath(`/requests/${applicationId}`);
   revalidatePath("/");
 }
 
@@ -136,12 +136,12 @@ export async function approveApplication(applicationId: string, formData: FormDa
     throw new Error(updateError.message);
   }
 
-  revalidatePath("/applications");
-  revalidatePath(`/applications/${applicationId}`);
+  revalidatePath("/requests");
+  revalidatePath(`/requests/${applicationId}`);
   revalidatePath("/vendors");
   revalidatePath("/contracts");
   revalidatePath("/");
-  redirect(`/applications/${applicationId}`);
+  redirect(`/requests/${applicationId}`);
 }
 
 export async function rejectApplication(applicationId: string, formData: FormData) {
@@ -163,10 +163,10 @@ export async function rejectApplication(applicationId: string, formData: FormDat
     throw new Error(error.message);
   }
 
-  revalidatePath("/applications");
-  revalidatePath(`/applications/${applicationId}`);
+  revalidatePath("/requests");
+  revalidatePath(`/requests/${applicationId}`);
   revalidatePath("/");
-  redirect(`/applications/${applicationId}`);
+  redirect(`/requests/${applicationId}`);
 }
 
 export async function deleteApplication(applicationId: string) {
@@ -177,7 +177,7 @@ export async function deleteApplication(applicationId: string) {
     throw new Error(error.message);
   }
 
-  revalidatePath("/applications");
+  revalidatePath("/requests");
   revalidatePath("/");
-  redirect("/applications");
+  redirect("/requests");
 }
