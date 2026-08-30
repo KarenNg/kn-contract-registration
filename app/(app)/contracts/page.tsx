@@ -69,7 +69,7 @@ export default async function ContractsPage({
           Search
         </button>
         {(q || status || view) && (
-          <Link href="/contracts" className="text-sm text-slate-500 hover:text-teal-700">
+          <Link href="/contracts" className="text-sm text-slate-500 hover:text-blue-700">
             Clear
           </Link>
         )}
@@ -105,14 +105,14 @@ export default async function ContractsPage({
                 return (
                   <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                     <td className="px-4 py-3">
-                      <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-700">
+                      <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-700">
                         {contract.title}
                       </Link>
                       <span className={`ml-2 ${code}`}>{contract.contract_code}</span>
                     </td>
                     <td className={td}>
                       {contract.vendors ? (
-                        <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-teal-700">
+                        <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-blue-700">
                           {contract.vendors.name}{" "}
                           <span className={code}>({contract.vendors.vendor_code})</span>
                         </Link>
@@ -162,7 +162,7 @@ function FilterLink({
       href={href}
       className={`rounded-full px-3 py-1 ${
         active
-          ? "bg-teal-600 text-white"
+          ? "bg-blue-600 text-white"
           : "border border-slate-300 bg-white text-slate-500 hover:text-slate-900"
       }`}
     >

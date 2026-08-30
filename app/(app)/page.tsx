@@ -77,7 +77,7 @@ export default async function DashboardPage() {
         />
         <Link
           href={applyHref}
-          className={`${panel} flex items-center justify-between p-5 hover:border-teal-700`}
+          className={`${panel} flex items-center justify-between p-5 hover:border-blue-700`}
         >
           <span>
             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Customer journey</p>
@@ -110,7 +110,7 @@ export default async function DashboardPage() {
                       <td className="px-4 py-3">
                         <Link
                           href={`/applications/${application.id}`}
-                          className="font-medium text-slate-900 hover:text-teal-600"
+                          className="font-medium text-slate-900 hover:text-blue-600"
                         >
                           {application.company_name}
                         </Link>
@@ -135,7 +135,7 @@ export default async function DashboardPage() {
             <h2 className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wider text-red-600">
               ⚠ Renewal decision needed
             </h2>
-            <Link href="/alerts" className="text-sm font-semibold text-teal-600 hover:text-teal-700">
+            <Link href="/alerts" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
               Open alerts →
             </Link>
           </div>
@@ -155,14 +155,14 @@ export default async function DashboardPage() {
                   {expiring.map((contract) => (
                     <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, true)}`}>
                       <td className="px-4 py-3">
-                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-600">
+                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-600">
                           {contract.title}
                         </Link>
                       </td>
                       <td className={`px-4 py-3 ${code}`}>{contract.vendors?.vendor_code ?? "—"}</td>
                       <td className="px-4 py-3">
                         {contract.vendors ? (
-                          <Link href={`/vendors/${contract.vendors.id}`} className="text-slate-700 hover:text-teal-600">
+                          <Link href={`/vendors/${contract.vendors.id}`} className="text-slate-700 hover:text-blue-600">
                             {contract.vendors.name}
                           </Link>
                         ) : (
@@ -183,7 +183,7 @@ export default async function DashboardPage() {
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">All contracts</h2>
-          <Link href="/contracts/new" className="text-sm font-semibold text-teal-600 hover:text-teal-700">
+          <Link href="/contracts/new" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
             + New contract
           </Link>
         </div>
@@ -206,14 +206,14 @@ export default async function DashboardPage() {
                   return (
                     <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                       <td className="px-4 py-3">
-                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-600">
+                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-600">
                           {contract.title}
                         </Link>
                       </td>
                       <td className={`px-4 py-3 ${code}`}>{contract.vendors?.vendor_code ?? "—"}</td>
                       <td className="px-4 py-3">
                         {contract.vendors ? (
-                          <Link href={`/vendors/${contract.vendors.id}`} className="text-slate-700 hover:text-teal-600">
+                          <Link href={`/vendors/${contract.vendors.id}`} className="text-slate-700 hover:text-blue-600">
                             {contract.vendors.name}
                           </Link>
                         ) : (
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                       No contracts yet.{" "}
-                      <Link href="/contracts/new" className="text-teal-600 hover:underline">
+                      <Link href="/contracts/new" className="text-blue-600 hover:underline">
                         Create one
                       </Link>
                       .

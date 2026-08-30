@@ -58,7 +58,7 @@ export default async function VendorDetailPage({
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/vendors" className="text-sm text-slate-500 hover:text-teal-700">
+        <Link href="/vendors" className="text-sm text-slate-500 hover:text-blue-700">
           ← All vendors
         </Link>
       </div>
@@ -113,7 +113,7 @@ export default async function VendorDetailPage({
                   return (
                     <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                       <td className="px-4 py-3">
-                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-700">
+                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-700">
                           {contract.title}
                         </Link>
                         <span className={`ml-2 ${code}`}>{contract.contract_code}</span>

@@ -23,14 +23,14 @@ export default async function LoginPage({
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
       <div className="mb-6">
         <p className="text-sm font-bold uppercase tracking-wider text-slate-900">
-          Contract<span className="text-teal-600">Ops</span>
+          Contract<span className="text-blue-600">Ops</span>
         </p>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
           Log in to your workspace
         </h1>
       </div>
 
-      {notice && <p className="mb-4 rounded-md border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-700">{notice}</p>}
+      {notice && <p className="mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700">{notice}</p>}
       {error && <p className={`mb-4 ${errorBanner}`}>{error}</p>}
 
       <div className={`p-6 ${panel}`}>
@@ -44,7 +44,7 @@ export default async function LoginPage({
               <label className={label}>Password</label>
               <Link
                 href="/forgot-password"
-                className="text-sm font-medium text-teal-600 hover:underline"
+                className="text-sm font-medium text-blue-600 hover:underline"
               >
                 Reset password
               </Link>
@@ -59,7 +59,7 @@ export default async function LoginPage({
 
       <p className="mt-6 text-center text-sm text-slate-500">
         New company?{" "}
-        <Link href="/signup" className="font-medium text-teal-600 hover:underline">
+        <Link href="/signup" className="font-medium text-blue-600 hover:underline">
           Create a workspace
         </Link>
       </p>

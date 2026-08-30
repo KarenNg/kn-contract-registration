@@ -95,7 +95,7 @@ export default async function ContractDetailPage({
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/contracts" className="text-sm text-slate-500 hover:text-teal-700">
+        <Link href="/contracts" className="text-sm text-slate-500 hover:text-blue-700">
           ← All contracts
         </Link>
       </div>
@@ -118,7 +118,7 @@ export default async function ContractDetailPage({
           label="Vendor"
           value={
             typedContract.vendors ? (
-              <Link href={`/vendors/${typedContract.vendors.id}`} className="hover:text-teal-700">
+              <Link href={`/vendors/${typedContract.vendors.id}`} className="hover:text-blue-700">
                 {typedContract.vendors.name} ({typedContract.vendors.vendor_code})
               </Link>
             ) : (
@@ -282,7 +282,7 @@ export default async function ContractDetailPage({
                 type="checkbox"
                 name="auto_renew"
                 defaultChecked={typedContract.auto_renew}
-                className="h-4 w-4 rounded border-slate-300 bg-white text-teal-500 focus:ring-teal-500"
+                className="h-4 w-4 rounded border-slate-300 bg-white text-blue-500 focus:ring-blue-500"
               />
               Yes
             </label>
@@ -343,7 +343,7 @@ export default async function ContractDetailPage({
                         href={getDocumentPublicUrl(doc.file_path)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium text-teal-600 hover:underline"
+                        className="font-medium text-blue-600 hover:underline"
                       >
                         {doc.file_name}
                       </a>
@@ -355,12 +355,12 @@ export default async function ContractDetailPage({
                     <td className="px-4 py-3 text-slate-500">{formatDateTime(doc.uploaded_at)}</td>
                     <td className="px-4 py-3 text-right">
                       <details className="inline-block text-left">
-                        <summary className="cursor-pointer text-xs font-medium text-teal-600 hover:underline">
+                        <summary className="cursor-pointer text-xs font-medium text-blue-600 hover:underline">
                           Replace
                         </summary>
                         <form action={replaceDoc} className="mt-2 flex items-center gap-2">
                           <input type="file" name="file" required className="text-xs text-slate-700" />
-                          <button type="submit" className="rounded-md bg-teal-600 px-2 py-1 text-xs font-semibold text-white hover:bg-teal-700">
+                          <button type="submit" className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700">
                             Upload
                           </button>
                         </form>

@@ -56,7 +56,7 @@ export default async function VendorsPage({
           Search
         </button>
         {(q || status) && (
-          <Link href="/vendors" className="text-sm text-slate-500 hover:text-teal-700">
+          <Link href="/vendors" className="text-sm text-slate-500 hover:text-blue-700">
             Clear
           </Link>
         )}
@@ -95,7 +95,7 @@ export default async function VendorsPage({
                 <tr key={vendor.id} className={tr}>
                   <td className={`px-4 py-3 ${code}`}>{vendor.vendor_code}</td>
                   <td className="px-4 py-3">
-                    <Link href={`/vendors/${vendor.id}`} className="font-medium text-slate-900 hover:text-teal-700">
+                    <Link href={`/vendors/${vendor.id}`} className="font-medium text-slate-900 hover:text-blue-700">
                       {vendor.name}
                     </Link>
                   </td>
@@ -114,7 +114,7 @@ export default async function VendorsPage({
                     ) : (
                       <>
                         No vendors yet.{" "}
-                        <Link href="/vendors/new" className="text-teal-600 hover:underline">
+                        <Link href="/vendors/new" className="text-blue-600 hover:underline">
                           Create your first one
                         </Link>
                         .
@@ -145,7 +145,7 @@ function FilterLink({
       href={href}
       className={`rounded-full px-3 py-1 ${
         active
-          ? "bg-teal-600 text-white"
+          ? "bg-blue-600 text-white"
           : "border border-slate-300 bg-white text-slate-500 hover:text-slate-900"
       }`}
     >

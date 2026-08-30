@@ -29,7 +29,7 @@ export default async function ApplyPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-6 py-12">
       <div>
-        <p className="text-[11px] font-bold uppercase tracking-wider text-teal-600">
+        <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
           {organization.name}
         </p>
         <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Vendor application</h1>

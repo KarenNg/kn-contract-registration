@@ -1,17 +1,18 @@
-// Shared design tokens — white background, navy header, KPI-first, severity-striped.
-// Keep every screen pulling from here so the app reads as one product.
+// Shared design tokens — enterprise console styling in the spirit of the SAP and
+// AWS web properties: light gray canvas, squid-ink header, SAP-blue links, AWS-orange
+// primary actions. Keep every screen pulling from here so the app reads as one product.
 
-export const panel = "rounded-lg border border-slate-200 bg-white shadow-sm";
+export const panel = "rounded border border-slate-200 bg-white shadow-sm";
 export const panelHeader = "border-b border-slate-200 bg-slate-50 px-6 py-3";
 
 export const input =
-  "mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600";
+  "mt-1 w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-[#0972D3] focus:outline-none focus:ring-1 focus:ring-[#0972D3]";
 export const label = "block text-sm font-medium text-slate-700";
 
 export const primaryButton =
-  "rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700";
+  "rounded bg-[#EC7211] px-4 py-2 text-sm font-semibold text-white hover:bg-[#C05601]";
 export const secondaryButton =
-  "rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50";
+  "rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50";
 export const dangerLink = "text-sm font-semibold text-red-600 hover:underline";
 
 export const tableWrap = `overflow-hidden ${panel}`;
