@@ -57,7 +57,7 @@ export default async function ApplicationDetailPage({
   return (
     <div className="space-y-8">
       <div>
-        <Link href="/applications" className="text-sm text-slate-500 hover:text-teal-700">
+        <Link href="/applications" className="text-sm text-slate-500 hover:text-blue-700">
           ← All applications
         </Link>
       </div>

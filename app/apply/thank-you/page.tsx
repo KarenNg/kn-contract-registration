@@ -16,7 +16,7 @@ export default async function ApplyThankYouPage({
         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Application submitted</h1>
         {code && (
           <p className="text-sm text-slate-500">
-            Your reference number is <span className="font-mono text-teal-600">{code}</span>. Keep
+            Your reference number is <span className="font-mono text-blue-600">{code}</span>. Keep
             it handy if you follow up.
           </p>
         )}

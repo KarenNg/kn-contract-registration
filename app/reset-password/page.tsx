@@ -19,7 +19,7 @@ export default async function ResetPasswordPage({
     <div className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
       <div className="mb-6">
         <p className="text-sm font-bold uppercase tracking-wider text-slate-900">
-          Contract<span className="text-teal-600">Ops</span>
+          Contract<span className="text-blue-600">Ops</span>
         </p>
         <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
           Choose a new password
@@ -63,7 +63,7 @@ export default async function ResetPasswordPage({
           </p>
           <Link
             href="/forgot-password"
-            className="mt-4 inline-block font-medium text-teal-600 hover:underline"
+            className="mt-4 inline-block font-medium text-blue-600 hover:underline"
           >
             Request a new link
           </Link>

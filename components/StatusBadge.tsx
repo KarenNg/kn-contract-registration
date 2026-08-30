@@ -3,7 +3,7 @@ import type { ApplicationStatus, ContractStatus, VendorStatus } from "@/lib/type
 const CONTRACT_COLORS: Record<ContractStatus, string> = {
   draft: "bg-slate-100 text-slate-600",
   active: "bg-emerald-100 text-emerald-700",
-  renewed: "bg-teal-100 text-teal-700",
+  renewed: "bg-blue-100 text-blue-700",
   terminated: "bg-red-100 text-red-700",
   expired: "bg-red-600 text-white",
 };

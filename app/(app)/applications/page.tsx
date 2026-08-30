@@ -59,7 +59,7 @@ export default async function ApplicationsPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/applications/${application.id}`}
-                      className="font-medium text-slate-900 hover:text-teal-700"
+                      className="font-medium text-slate-900 hover:text-blue-700"
                     >
                       {application.company_name}
                     </Link>
@@ -76,7 +76,7 @@ export default async function ApplicationsPage() {
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                     No applications yet.{" "}
-                    <Link href={applyHref} className="text-teal-600 hover:underline">
+                    <Link href={applyHref} className="text-blue-600 hover:underline">
                       Submit one
                     </Link>
                     .

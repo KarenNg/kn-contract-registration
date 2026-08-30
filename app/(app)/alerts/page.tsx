@@ -74,14 +74,14 @@ export default async function AlertsPage() {
                     return (
                       <tr key={contract.id} className={`${tr} ${severityStripe(contract.status, soon)}`}>
                         <td className="px-4 py-3">
-                          <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-700">
+                          <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-700">
                             {contract.title}
                           </Link>
                           <span className={`ml-2 ${code}`}>{contract.contract_code}</span>
                         </td>
                         <td className={td}>
                           {contract.vendors ? (
-                            <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-teal-700">
+                            <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-blue-700">
                               {contract.vendors.name}
                             </Link>
                           ) : (
@@ -131,7 +131,7 @@ export default async function AlertsPage() {
             <ul className="divide-y divide-slate-200">
               {acknowledged.map((contract) => (
                 <li key={contract.id} className="flex items-center justify-between px-2 py-2 text-sm">
-                  <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-teal-700">
+                  <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-700">
                     {contract.title}
                   </Link>
                   <span className="text-slate-500">{formatDate(contract.end_date)}</span>
