@@ -31,14 +31,14 @@ export default async function VendorsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Vendors</h1>
           <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
             All registered vendors and their contract counts.
           </p>
         </div>
-        <Link href="/vendors/new" className={primaryButton}>
+        <Link href="/vendors/new" className={`${primaryButton} self-start`}>
           + New vendor
         </Link>
       </div>
@@ -143,7 +143,7 @@ function FilterLink({
   return (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1 ${
+      className={`rounded-full px-3 py-1.5 ${
         active
           ? "bg-blue-600 text-white"
           : "border border-slate-300 bg-white text-slate-500 hover:text-slate-900"

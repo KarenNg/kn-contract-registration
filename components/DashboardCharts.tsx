@@ -128,23 +128,32 @@ export function ExpiringHorizonChart({ segments }: { segments: Segment[] }) {
         by end date, from today — Draft hasn&apos;t started, Expired and Terminated are already closed; the remaining bars are exclusive ranges covering every active contract
       </p>
 
-      <div className="mt-5 flex items-end gap-2.5 px-1" style={{ height: 120 }}>
-        {segments.map((s) => (
-          <div key={s.label} className="flex flex-1 flex-col items-center gap-2" title={`${s.label}: ${s.value} contract${s.value === 1 ? "" : "s"}`}>
-            <span className="text-base font-bold tabular-nums text-slate-900">{s.value}</span>
+      <div className="-mx-1 mt-5 overflow-x-auto px-1">
+        <div className="flex items-end gap-2.5" style={{ height: 120 }}>
+          {segments.map((s) => (
             <div
-              style={{ height: `${Math.max(6, (s.value / max) * 88)}px` }}
-              className={`w-full max-w-[44px] rounded-t ${s.color}`}
-            />
-          </div>
-        ))}
-      </div>
-      <div className="mt-2 flex gap-2.5 px-1">
-        {segments.map((s) => (
-          <div key={s.label} className="flex-1 text-center text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-500">
-            {s.label}
-          </div>
-        ))}
+              key={s.label}
+              className="flex w-14 shrink-0 sm:shrink flex-col items-center gap-2 sm:w-auto sm:flex-1"
+              title={`${s.label}: ${s.value} contract${s.value === 1 ? "" : "s"}`}
+            >
+              <span className="text-base font-bold tabular-nums text-slate-900">{s.value}</span>
+              <div
+                style={{ height: `${Math.max(6, (s.value / max) * 88)}px` }}
+                className={`w-full max-w-[44px] rounded-t ${s.color}`}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2.5">
+          {segments.map((s) => (
+            <div
+              key={s.label}
+              className="w-14 shrink-0 sm:shrink text-center text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-500 sm:w-auto sm:flex-1"
+            >
+              {s.label}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

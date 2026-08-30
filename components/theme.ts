@@ -10,9 +10,9 @@ export const input =
 export const label = "block text-sm font-medium text-slate-700";
 
 export const primaryButton =
-  "rounded bg-[#EC7211] px-4 py-2 text-sm font-semibold text-white hover:bg-[#C05601]";
+  "rounded bg-[#EC7211] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#C05601] sm:py-2";
 export const secondaryButton =
-  "rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50";
+  "rounded border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:py-2";
 export const dangerLink = "text-sm font-semibold text-red-600 hover:underline";
 
 export const tableWrap = `overflow-hidden ${panel}`;

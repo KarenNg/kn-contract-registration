@@ -65,7 +65,7 @@ export default async function VendorDetailPage({
 
       {errorMessage && <p className={errorBanner}>{errorMessage}</p>}
 
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className={code}>{(vendor as Vendor).vendor_code}</p>
           <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900">
@@ -75,7 +75,7 @@ export default async function VendorDetailPage({
             <VendorStatusBadge status={(vendor as Vendor).status} />
           </div>
         </div>
-        <Link href={`/contracts/new?vendor_id=${id}`} className={primaryButton}>
+        <Link href={`/contracts/new?vendor_id=${id}`} className={`${primaryButton} self-start`}>
           + New contract
         </Link>
       </div>

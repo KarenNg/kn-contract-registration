@@ -75,12 +75,12 @@ export default async function PlatformAdminPage() {
             <thead>
               <tr>
                 <th className={th}>Company</th>
-                <th className={th}>Slug</th>
+                <th className={`${th} hidden sm:table-cell`}>Slug</th>
                 <th className={th}>Members</th>
                 <th className={th}>Vendors</th>
                 <th className={th}>Contracts</th>
                 <th className={th}>Requests</th>
-                <th className={th}>Signed up</th>
+                <th className={`${th} hidden sm:table-cell`}>Signed up</th>
               </tr>
             </thead>
             <tbody>
@@ -90,7 +90,7 @@ export default async function PlatformAdminPage() {
                 return (
                   <tr key={org.id} className={tr}>
                     <td className="px-4 py-3 font-medium text-slate-900">{org.name}</td>
-                    <td className={`px-4 py-3 ${code}`}>{org.slug}</td>
+                    <td className={`px-4 py-3 ${code} hidden sm:table-cell`}>{org.slug}</td>
                     <td className="px-4 py-3">
                       {orgMembers.length === 0 ? (
                         <span className="font-semibold text-amber-600">0 — orphaned</span>
@@ -110,7 +110,7 @@ export default async function PlatformAdminPage() {
                     <td className={`${td} tabular-nums`}>{orgStats?.vendor_count ?? 0}</td>
                     <td className={`${td} tabular-nums`}>{orgStats?.contract_count ?? 0}</td>
                     <td className={`${td} tabular-nums`}>{orgStats?.application_count ?? 0}</td>
-                    <td className={td}>{formatDateTime(org.created_at)}</td>
+                    <td className={`${td} hidden sm:table-cell`}>{formatDateTime(org.created_at)}</td>
                   </tr>
                 );
               })}
