@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { sweepExpiredContracts } from "@/lib/contracts";
 import { ApplicationStatusBadge, ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
-import { ContractStatusChart, ExpiringHorizonChart } from "@/components/DashboardCharts";
+import { ContractStatusChart, ExpiringHorizonChart, VendorConcentrationChart } from "@/components/DashboardCharts";
 import { VendorFilter } from "@/components/VendorFilter";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { isClosed, isExpiringSoon, isInForce, type ContractWithVendor, type VendorApplication } from "@/lib/types";
@@ -89,6 +89,26 @@ export default async function DashboardPage({
     return d === null || d > 730;
   }).length;
 
+  const totalValue = allContracts.reduce((sum, c) => sum + (c.value ?? 0), 0);
+
+  const vendorSpend = new Map<string, { id: string; code: string; name: string; value: number; count: number }>();
+  for (const c of allContracts) {
+    if (!c.vendors) continue;
+    const existing = vendorSpend.get(c.vendors.id) ?? {
+      id: c.vendors.id,
+      code: c.vendors.vendor_code,
+      name: c.vendors.name,
+      value: 0,
+      count: 0,
+    };
+    existing.value += c.value ?? 0;
+    existing.count += 1;
+    vendorSpend.set(c.vendors.id, existing);
+  }
+  const topVendorsBySpend = [...vendorSpend.values()]
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5);
+
   const selectedVendor = (vendorOptions ?? []).find((v) => v.id === vendorId);
 
   return (
@@ -105,10 +125,11 @@ export default async function DashboardPage({
         <VendorFilter vendors={vendorOptions ?? []} selectedVendorId={vendorId} />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <KpiTile label="Vendors" value={vendorCount ?? 0} href="/vendors" />
         <KpiTile label="Contracts" value={contractCount} href="/contracts" />
         <KpiTile label="Documents on file" value={documentCount ?? 0} />
+        <KpiTile label="Total contract value" value={totalValue} format="currency" />
         <KpiTile
           label="Expiring within 60 days"
           value={expiring.length}
@@ -117,7 +138,7 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <ContractStatusChart
           total={total}
           segments={[
@@ -126,6 +147,7 @@ export default async function DashboardPage({
             { label: "Draft", value: draftCount, color: "bg-slate-300" },
           ]}
         />
+        <VendorConcentrationChart vendors={topVendorsBySpend} totalValue={totalValue} currency="USD" />
         <ExpiringHorizonChart
           segments={[
             { label: "Draft", value: draftCount, color: "bg-slate-300" },
@@ -329,11 +351,13 @@ function KpiTile({
   value,
   href,
   warn,
+  format,
 }: {
   label: string;
   value: number;
   href?: string;
   warn?: boolean;
+  format?: "currency";
 }) {
   const content = (
     <div
@@ -341,7 +365,7 @@ function KpiTile({
     >
       <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <p className={`mt-1 text-3xl font-bold tabular-nums ${warn ? "text-red-700" : "text-slate-900"}`}>
-        {value}
+        {format === "currency" ? formatCurrency(value) : value}
       </p>
     </div>
   );
