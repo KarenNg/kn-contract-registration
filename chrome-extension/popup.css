@@ -1,0 +1,198 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  width: 340px;
+  max-height: 560px;
+  overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  color: #1b2733;
+  background: #f5f7f9;
+}
+
+.brand {
+  background: #232f3e;
+  color: #fff;
+  padding: 12px 14px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.brand-name { font-weight: 700; font-size: 15px; }
+.brand-name .accent { color: #ec7211; }
+.brand-sub { font-size: 11px; color: #7cc5ff; }
+
+main { padding: 14px; }
+
+.view.hidden, .hidden { display: none !important; }
+
+.hint { color: #4b5a68; margin: 0 0 10px; line-height: 1.4; }
+
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #4b5a68;
+  margin-bottom: 8px;
+}
+
+input, select, textarea {
+  display: block;
+  width: 100%;
+  margin-top: 3px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  border: 1px solid #c7d0d8;
+  border-radius: 4px;
+  background: #fff;
+  color: #1b2733;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #0972d3;
+  box-shadow: 0 0 0 1px #0972d3;
+}
+
+.checkbox { display: flex; align-items: center; gap: 6px; }
+.checkbox input { width: auto; margin: 0; }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.field-group { margin-bottom: 6px; }
+hr { border: none; border-top: 1px solid #dde3e8; margin: 12px 0; }
+
+.tab-row { display: flex; gap: 6px; margin-bottom: 10px; }
+.tab-btn {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #c7d0d8;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5a68;
+}
+.tab-btn.active { background: #0972d3; border-color: #0972d3; color: #fff; }
+
+.results {
+  margin-top: 4px;
+  border: 1px solid #c7d0d8;
+  border-radius: 4px;
+  background: #fff;
+  max-height: 140px;
+  overflow-y: auto;
+}
+.result-item {
+  padding: 6px 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #eef1f3;
+  font-size: 12px;
+}
+.result-item:last-child { border-bottom: none; }
+.result-item:hover { background: #f0f7ff; }
+.result-item .code { color: #6b7986; font-family: monospace; font-size: 11px; margin-left: 4px; }
+
+.selected {
+  margin-top: 6px;
+  padding: 6px 8px;
+  background: #e7f6ec;
+  border: 1px solid #b9e3c6;
+  border-radius: 4px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.selected button {
+  border: none;
+  background: none;
+  color: #0972d3;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 9px;
+  border: none;
+  border-radius: 4px;
+  background: #ec7211;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.btn-primary:hover { background: #c05601; }
+.btn-primary:disabled { background: #d8ac83; cursor: default; }
+
+.btn-secondary {
+  width: 100%;
+  padding: 9px;
+  border: 1px solid #c7d0d8;
+  border-radius: 4px;
+  background: #fff;
+  color: #1b2733;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.who {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #4b5a68;
+}
+.link {
+  border: none;
+  background: none;
+  color: #0972d3;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+}
+
+.error {
+  background: #fdecea;
+  border: 1px solid #f3b4ac;
+  color: #b3261e;
+  padding: 8px;
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+
+.success-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #16825d;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin: 4px auto 12px;
+}
+#success-view { text-align: center; }
+#success-message { color: #1b2733; margin-bottom: 4px; }
+
+footer {
+  padding: 8px 14px 12px;
+  text-align: center;
+}
+footer a {
+  color: #6b7986;
+  font-size: 11px;
+  text-decoration: none;
+}
+footer a:hover { text-decoration: underline; }
