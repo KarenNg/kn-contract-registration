@@ -1,0 +1,154 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>ContractOps Quick Capture</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="brand">
+      <span class="brand-name">Contract<span class="accent">Ops</span></span>
+      <span class="brand-sub">Quick Capture</span>
+    </header>
+
+    <main id="app">
+      <!-- Login view -->
+      <section id="login-view" class="view hidden">
+        <p class="hint">Sign in with your ContractOps account to capture straight into your organization's data.</p>
+        <label>Email
+          <input type="email" id="login-email" autocomplete="username" />
+        </label>
+        <label>Password
+          <input type="password" id="login-password" autocomplete="current-password" />
+        </label>
+        <div id="login-error" class="error hidden"></div>
+        <button id="login-submit" class="btn-primary">Sign in</button>
+      </section>
+
+      <!-- Capture view -->
+      <section id="capture-view" class="view hidden">
+        <div class="who">
+          <span id="who-org">—</span>
+          <button id="sign-out" class="link">Sign out</button>
+        </div>
+
+        <div class="field-group">
+          <div class="tab-row">
+            <button type="button" class="tab-btn active" data-mode="existing">Existing vendor</button>
+            <button type="button" class="tab-btn" data-mode="new">New vendor</button>
+          </div>
+
+          <div id="vendor-existing">
+            <label>Vendor
+              <input type="text" id="vendor-search" placeholder="Start typing a vendor name…" autocomplete="off" />
+            </label>
+            <div id="vendor-results" class="results hidden"></div>
+            <div id="vendor-selected" class="selected hidden"></div>
+          </div>
+
+          <div id="vendor-new" class="hidden">
+            <label>Vendor name *
+              <input type="text" id="new-vendor-name" />
+            </label>
+            <div class="grid-2">
+              <label>Contact name
+                <input type="text" id="new-vendor-contact-name" />
+              </label>
+              <label>Contact email
+                <input type="email" id="new-vendor-contact-email" />
+              </label>
+            </div>
+            <label>Contact phone
+              <input type="text" id="new-vendor-contact-phone" />
+            </label>
+            <label>Address
+              <input type="text" id="new-vendor-address" />
+            </label>
+          </div>
+        </div>
+
+        <hr />
+
+        <div class="field-group">
+          <label>Contract title *
+            <input type="text" id="contract-title" />
+          </label>
+          <div class="grid-2">
+            <label>Type
+              <input type="text" id="contract-type" list="contract-type-options" placeholder="Service, Supply…" />
+              <datalist id="contract-type-options">
+                <option value="Service"></option>
+                <option value="Supply"></option>
+                <option value="Facilities"></option>
+                <option value="Consulting"></option>
+                <option value="Software"></option>
+              </datalist>
+            </label>
+            <label>Status
+              <select id="contract-status">
+                <option value="draft" selected>Draft</option>
+                <option value="active">Active</option>
+                <option value="renewed">Renewed</option>
+                <option value="terminated">Terminated</option>
+                <option value="expired">Expired</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>Start date
+              <input type="date" id="contract-start" />
+            </label>
+            <label>End date
+              <input type="date" id="contract-end" />
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>Value
+              <input type="number" id="contract-value" min="0" step="0.01" />
+            </label>
+            <label>Currency
+              <input type="text" id="contract-currency" value="USD" maxlength="3" />
+            </label>
+          </div>
+          <label>Owner
+            <input type="text" id="contract-owner" placeholder="Contract owner name" />
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="contract-auto-renew" />
+            Auto-renews
+          </label>
+          <label>Description
+            <textarea id="contract-description" rows="2"></textarea>
+          </label>
+          <label>Notes
+            <textarea id="contract-notes" rows="2"></textarea>
+          </label>
+        </div>
+
+        <div id="form-error" class="error hidden"></div>
+        <button id="submit-btn" class="btn-primary">Save to ContractOps</button>
+      </section>
+
+      <!-- Success view -->
+      <section id="success-view" class="view hidden">
+        <div class="success-icon">✓</div>
+        <p id="success-message"></p>
+        <button id="open-app" class="btn-primary">Open in ContractOps</button>
+        <button id="capture-another" class="btn-secondary">Capture another</button>
+      </section>
+
+      <!-- Loading -->
+      <section id="loading-view" class="view">
+        <p class="hint">Loading…</p>
+      </section>
+    </main>
+
+    <footer>
+      <a href="#" id="open-options">Settings</a>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
