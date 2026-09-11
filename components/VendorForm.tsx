@@ -1,4 +1,4 @@
-import type { Vendor } from "@/lib/types";
+import { RISK_TIERS, type Vendor } from "@/lib/types";
 import { input, label, primaryButton } from "@/components/theme";
 
 export function VendorForm({
@@ -40,6 +40,41 @@ export function VendorForm({
       <div>
         <label className={label}>Address</label>
         <input name="address" defaultValue={vendor?.address ?? ""} className={input} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 rounded-md border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
+        <div>
+          <label className={label}>Risk tier</label>
+          <select name="risk_tier" defaultValue={vendor?.risk_tier ?? ""} className={input}>
+            <option value="">Not rated</option>
+            {RISK_TIERS.map((tier) => (
+              <option key={tier} value={tier} className="capitalize">
+                {tier}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={label}>Last risk review</label>
+          <input
+            type="date"
+            name="last_risk_review_at"
+            defaultValue={vendor?.last_risk_review_at ?? ""}
+            className={input}
+          />
+        </div>
+        <div>
+          <label className={label}>Compliance doc expires</label>
+          <input
+            type="date"
+            name="compliance_doc_expires_on"
+            defaultValue={vendor?.compliance_doc_expires_on ?? ""}
+            className={input}
+          />
+          <p className="mt-1 text-[11px] text-slate-400">
+            E.g. certificate of insurance — tied to this vendor, not one contract.
+          </p>
+        </div>
       </div>
 
       <div>

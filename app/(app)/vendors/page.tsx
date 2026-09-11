@@ -2,24 +2,34 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { canMutate } from "@/lib/permissions";
-import { VendorStatusBadge } from "@/components/StatusBadge";
-import type { Vendor } from "@/lib/types";
+import { RiskTierBadge, VendorStatusBadge } from "@/components/StatusBadge";
+import { RISK_TIERS, type Vendor } from "@/lib/types";
 import { code, errorBanner, input, primaryButton, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
 
+function buildHref(params: { q?: string; status?: string; risk?: string }): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.status) search.set("status", params.status);
+  if (params.risk) search.set("risk", params.risk);
+  const qs = search.toString();
+  return qs ? `/vendors?${qs}` : "/vendors";
+}
+
 export default async function VendorsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; risk?: string }>;
 }) {
-  const { q, status } = await searchParams;
+  const { q, status, risk } = await searchParams;
   const profile = await requireProfile();
   const canEdit = canMutate(profile.role);
   const supabase = await createClient();
 
   let query = supabase.from("vendors").select("*").order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
+  if (risk) query = query.eq("risk_tier", risk);
   if (q) query = query.or(`name.ilike.%${q}%,vendor_code.ilike.%${q}%,contact_name.ilike.%${q}%,contact_email.ilike.%${q}%`);
 
   const { data: vendors, error } = await query;
@@ -58,28 +68,32 @@ export default async function VendorsPage({
           className={`${input} mt-0 max-w-xs`}
         />
         {status && <input type="hidden" name="status" value={status} />}
+        {risk && <input type="hidden" name="risk" value={risk} />}
         <button type="submit" className={primaryButton}>
           Search
         </button>
-        {(q || status) && (
+        {(q || status || risk) && (
           <Link href="/vendors" className="text-sm text-slate-500 hover:text-blue-700">
             Clear
           </Link>
         )}
       </form>
 
-      <div className="flex flex-wrap gap-2 text-sm">
-        <FilterLink label="All" active={!status} href={q ? `/vendors?q=${encodeURIComponent(q)}` : "/vendors"} />
-        <FilterLink
-          label="Active"
-          active={status === "active"}
-          href={`/vendors?status=active${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-        />
-        <FilterLink
-          label="Inactive"
-          active={status === "inactive"}
-          href={`/vendors?status=inactive${q ? `&q=${encodeURIComponent(q)}` : ""}`}
-        />
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <FilterLink label="All" active={!status} href={buildHref({ q, risk })} />
+        <FilterLink label="Active" active={status === "active"} href={buildHref({ q, risk, status: "active" })} />
+        <FilterLink label="Inactive" active={status === "inactive"} href={buildHref({ q, risk, status: "inactive" })} />
+        <span className="mx-1 text-slate-300">|</span>
+        <FilterLink label="Any risk" active={!risk} href={buildHref({ q, status })} />
+        {RISK_TIERS.map((tier) => (
+          <FilterLink
+            key={tier}
+            label={tier}
+            active={risk === tier}
+            href={buildHref({ q, status, risk: tier })}
+            className="capitalize"
+          />
+        ))}
       </div>
 
       {error && <p className={errorBanner}>{error.message}</p>}
@@ -93,6 +107,7 @@ export default async function VendorsPage({
                 <th className={th}>Name</th>
                 <th className={th}>Contact</th>
                 <th className={th}>Status</th>
+                <th className={th}>Risk</th>
                 <th className={th}>Contracts</th>
               </tr>
             </thead>
@@ -109,12 +124,15 @@ export default async function VendorsPage({
                   <td className="px-4 py-3">
                     <VendorStatusBadge status={vendor.status} />
                   </td>
+                  <td className="px-4 py-3">
+                    <RiskTierBadge tier={vendor.risk_tier} />
+                  </td>
                   <td className={`${td} tabular-nums`}>{counts.get(vendor.id) ?? 0}</td>
                 </tr>
               ))}
               {vendors?.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                     {q || status ? (
                       "No vendors match this search."
                     ) : canEdit ? (
@@ -143,15 +161,17 @@ function FilterLink({
   label,
   href,
   active,
+  className,
 }: {
   label: string;
   href: string;
   active: boolean;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className={`rounded-full px-3 py-1.5 ${
+      className={`rounded-full px-3 py-1.5 ${className ?? ""} ${
         active
           ? "bg-blue-600 text-white"
           : "border border-slate-300 bg-white text-slate-500 hover:text-slate-900"

@@ -1,4 +1,4 @@
-import type { ApplicationStatus, ContractStatus, VendorStatus } from "@/lib/types";
+import type { ApplicationStatus, ContractStatus, RiskTier, VendorStatus } from "@/lib/types";
 
 const CONTRACT_COLORS: Record<ContractStatus, string> = {
   draft: "bg-slate-100 text-slate-600",
@@ -11,6 +11,13 @@ const CONTRACT_COLORS: Record<ContractStatus, string> = {
 const VENDOR_COLORS: Record<VendorStatus, string> = {
   active: "bg-emerald-100 text-emerald-700",
   inactive: "bg-slate-100 text-slate-600",
+};
+
+const RISK_COLORS: Record<RiskTier, string> = {
+  low: "bg-emerald-100 text-emerald-700",
+  medium: "bg-yellow-100 text-yellow-800",
+  high: "bg-orange-100 text-orange-800",
+  critical: "bg-red-100 text-red-700",
 };
 
 const APPLICATION_COLORS: Record<ApplicationStatus, string> = {
@@ -29,6 +36,11 @@ export function ContractStatusBadge({ status }: { status: ContractStatus }) {
 
 export function VendorStatusBadge({ status }: { status: VendorStatus }) {
   return <span className={`${chip} ${VENDOR_COLORS[status]}`}>{status}</span>;
+}
+
+export function RiskTierBadge({ tier }: { tier: RiskTier | null }) {
+  if (!tier) return <span className="text-xs text-slate-400">Not rated</span>;
+  return <span className={`${chip} ${RISK_COLORS[tier]}`}>{tier}</span>;
 }
 
 export function ApplicationStatusBadge({ status }: { status: ApplicationStatus }) {

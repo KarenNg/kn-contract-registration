@@ -15,6 +15,9 @@ function fromFormData(formData: FormData) {
     address: String(formData.get("address") ?? "").trim() || null,
     status: String(formData.get("status") ?? "active"),
     notes: String(formData.get("notes") ?? "").trim() || null,
+    risk_tier: String(formData.get("risk_tier") ?? "").trim() || null,
+    last_risk_review_at: String(formData.get("last_risk_review_at") ?? "").trim() || null,
+    compliance_doc_expires_on: String(formData.get("compliance_doc_expires_on") ?? "").trim() || null,
   };
 }
 
@@ -53,9 +56,22 @@ export async function updateVendor(vendorId: string, formData: FormData) {
   }
 
   const supabase = await createClient();
+
+  const { data: current } = await supabase
+    .from("vendors")
+    .select("compliance_doc_expires_on")
+    .eq("id", vendorId)
+    .single();
+
+  // A changed expiry date is a new deadline — don't let a stale acknowledgement hide it.
+  const payload =
+    current && current.compliance_doc_expires_on !== values.compliance_doc_expires_on
+      ? { ...values, compliance_doc_acknowledged_at: null }
+      : values;
+
   const { error } = await supabase
     .from("vendors")
-    .update(values)
+    .update(payload)
     .eq("id", vendorId);
 
   if (error) {
@@ -64,6 +80,7 @@ export async function updateVendor(vendorId: string, formData: FormData) {
 
   revalidatePath("/vendors");
   revalidatePath(`/vendors/${vendorId}`);
+  revalidatePath("/alerts");
   revalidatePath("/");
 }
 
@@ -84,4 +101,23 @@ export async function deleteVendor(vendorId: string) {
   revalidatePath("/vendors");
   revalidatePath("/");
   redirect("/vendors");
+}
+
+/** Dismisses a vendor's compliance-document expiry alert until the situation changes. */
+export async function acknowledgeVendorComplianceExpiry(vendorId: string) {
+  const profile = await requireProfile();
+  assertCanMutate(profile.role);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("vendors")
+    .update({ compliance_doc_acknowledged_at: new Date().toISOString() })
+    .eq("id", vendorId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/vendors");
+  revalidatePath(`/vendors/${vendorId}`);
+  revalidatePath("/alerts");
+  revalidatePath("/");
 }
