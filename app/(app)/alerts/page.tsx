@@ -36,29 +36,38 @@ export default async function AlertsPage({
 
   const canEdit = canMutate(profile.role);
 
-  const [{ data: contracts }, { data: documents }, { data: vendorsWithCompliance }, { data: obligations }] =
-    await Promise.all([
-      supabase
-        .from("contracts")
-        .select("*, vendors(id, vendor_code, name)")
-        .in("status", ["active", "renewed", "expired"])
-        .order("end_date", { ascending: true, nullsFirst: false }),
-      supabase
-        .from("contract_documents")
-        .select("*, contracts(id, contract_code, title, vendor_id, owner_user_id, vendors(id, vendor_code, name))")
-        .not("expires_on", "is", null)
-        .is("superseded_at", null)
-        .order("expires_on", { ascending: true }),
-      supabase
-        .from("vendors")
-        .select("*")
-        .not("compliance_doc_expires_on", "is", null)
-        .order("compliance_doc_expires_on", { ascending: true }),
-      supabase
-        .from("contract_obligations")
-        .select("*, contracts(id, contract_code, title, currency, owner_user_id, vendors(id, vendor_code, name))")
-        .order("due_date", { ascending: true }),
-    ]);
+  const [
+    { data: contracts },
+    { data: documents },
+    { data: vendorsWithCompliance },
+    { data: obligations },
+    { data: contractsWithPayments },
+  ] = await Promise.all([
+    supabase
+      .from("contracts")
+      .select("*, vendors(id, vendor_code, name)")
+      .in("status", ["active", "renewed", "expired"])
+      .order("end_date", { ascending: true, nullsFirst: false }),
+    supabase
+      .from("contract_documents")
+      .select("*, contracts(id, contract_code, title, vendor_id, owner_user_id, vendors(id, vendor_code, name))")
+      .not("expires_on", "is", null)
+      .is("superseded_at", null)
+      .order("expires_on", { ascending: true }),
+    supabase
+      .from("vendors")
+      .select("*")
+      .not("compliance_doc_expires_on", "is", null)
+      .order("compliance_doc_expires_on", { ascending: true }),
+    supabase
+      .from("contract_obligations")
+      .select("*, contracts(id, contract_code, title, currency, owner_user_id, vendors(id, vendor_code, name))")
+      .order("due_date", { ascending: true }),
+    supabase
+      .from("contracts")
+      .select("id, contract_code, title, value, currency, owner_user_id, vendors(id, vendor_code, name), contract_payments(amount)")
+      .not("value", "is", null),
+  ]);
 
   const allContracts = (contracts as ContractWithVendor[] | null) ?? [];
   const needsAttention = allContracts.filter(
@@ -89,6 +98,20 @@ export default async function AlertsPage({
     (o) => !o.completed_at && (isPastEndDate(o.due_date) || isExpiringSoon(o.due_date, 14)),
   );
   const completedObligations = allObligations.filter((o) => o.completed_at);
+
+  interface ContractWithPayments {
+    id: string;
+    contract_code: string;
+    title: string;
+    value: number;
+    currency: string;
+    owner_user_id: string | null;
+    vendors: { id: string; vendor_code: string; name: string } | null;
+    contract_payments: { amount: number }[] | null;
+  }
+  const overBudgetContracts = ((contractsWithPayments as unknown as ContractWithPayments[] | null) ?? [])
+    .map((c) => ({ ...c, totalPaid: (c.contract_payments ?? []).reduce((sum, p) => sum + p.amount, 0) }))
+    .filter((c) => c.totalPaid > c.value);
 
   const byOwner = new Map<string, ContractWithVendor[]>();
   for (const contract of needsAttention) {
@@ -535,6 +558,73 @@ export default async function AlertsPage({
               </ul>
             </div>
           </details>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Budget variance
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Contracts where recorded payments have exceeded the contract's budgeted value.
+          </p>
+        </div>
+
+        {overBudgetContracts.length === 0 && (
+          <div className={`${panel} p-8 text-center text-slate-500`}>No contracts are running over budget.</div>
+        )}
+
+        {overBudgetContracts.length > 0 && (
+          <div className={tableWrap}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={th}>Contract</th>
+                    <th className={th}>Vendor</th>
+                    <th className={th}>Budgeted</th>
+                    <th className={th}>Paid</th>
+                    <th className={th}>Over by</th>
+                    <th className={th} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {overBudgetContracts.map((contract) => (
+                    <tr key={contract.id} className={`${tr} bg-red-50`}>
+                      <td className="px-4 py-3">
+                        <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-700">
+                          {contract.title}
+                        </Link>
+                        <span className={`ml-2 ${code}`}>{contract.contract_code}</span>
+                      </td>
+                      <td className={td}>
+                        {contract.vendors ? (
+                          <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-blue-700">
+                            {contract.vendors.name}
+                          </Link>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className={td}>{formatCurrency(contract.value, contract.currency)}</td>
+                      <td className={td}>{formatCurrency(contract.totalPaid, contract.currency)}</td>
+                      <td className="px-4 py-3">
+                        <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+                          ⚠ {formatCurrency(contract.totalPaid - contract.value, contract.currency)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Link href={`/contracts/${contract.id}`} className={`${secondaryButton} text-center`}>
+                          View contract
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </section>
 

@@ -82,7 +82,8 @@ export type ContractEventType =
   | "alert_acknowledged"
   | "document_expiry_acknowledged"
   | "obligation_added"
-  | "obligation_completed";
+  | "obligation_completed"
+  | "payment_recorded";
 
 export interface ContractEvent {
   id: string;
@@ -164,6 +165,29 @@ export interface ContractObligationWithContract extends ContractObligation {
     id: string;
     contract_code: string;
     title: string;
+    currency: string;
+    owner_user_id: string | null;
+    vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
+  } | null;
+}
+
+export interface ContractPayment {
+  id: string;
+  contract_id: string;
+  obligation_id: string | null;
+  amount: number;
+  payment_date: string;
+  reference: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface ContractPaymentWithContract extends ContractPayment {
+  contracts: {
+    id: string;
+    contract_code: string;
+    title: string;
+    value: number | null;
     currency: string;
     owner_user_id: string | null;
     vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
