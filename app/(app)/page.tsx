@@ -110,21 +110,37 @@ export default async function DashboardPage({
     return d === null || d > 730;
   }).length;
 
-  const totalValue = allContracts.reduce((sum, c) => sum + (c.value ?? 0), 0);
+  // Contract values are stored per-currency and never converted, so they're summed within
+  // each currency separately rather than added together and mislabeled as one currency.
+  const valueByCurrency = new Map<string, number>();
+  for (const c of allContracts) {
+    if (!c.value) continue;
+    valueByCurrency.set(c.currency, (valueByCurrency.get(c.currency) ?? 0) + c.value);
+  }
+  const currencyTotals = [...valueByCurrency.entries()]
+    .map(([currency, value]) => ({ currency, value }))
+    .sort((a, b) => b.value - a.value);
+  const primaryCurrency = currencyTotals[0]?.currency ?? "USD";
+  const primaryCurrencyTotal = currencyTotals[0]?.value ?? 0;
 
-  const vendorSpend = new Map<string, { id: string; code: string; name: string; value: number; count: number }>();
+  const vendorSpend = new Map<
+    string,
+    { id: string; code: string; name: string; currency: string; value: number; count: number }
+  >();
   for (const c of allContracts) {
     if (!c.vendors) continue;
-    const existing = vendorSpend.get(c.vendors.id) ?? {
+    const key = `${c.vendors.id}::${c.currency}`;
+    const existing = vendorSpend.get(key) ?? {
       id: c.vendors.id,
       code: c.vendors.vendor_code,
       name: c.vendors.name,
+      currency: c.currency,
       value: 0,
       count: 0,
     };
     existing.value += c.value ?? 0;
     existing.count += 1;
-    vendorSpend.set(c.vendors.id, existing);
+    vendorSpend.set(key, existing);
   }
   const topVendorsBySpend = [...vendorSpend.values()]
     .sort((a, b) => b.value - a.value)
@@ -150,7 +166,7 @@ export default async function DashboardPage({
         <KpiTile label="Vendors" value={vendorCount ?? 0} href="/vendors" />
         <KpiTile label="Contracts" value={contractCount} href="/contracts" />
         <KpiTile label="Documents on file" value={documentCount ?? 0} />
-        <KpiTile label="Total contract value" value={totalValue} format="currency" />
+        <ValueKpiTile currencyTotals={currencyTotals} />
         <KpiTile
           label="Expiring within 60 days"
           value={expiring.length}
@@ -168,7 +184,11 @@ export default async function DashboardPage({
             { label: "Draft", value: draftCount, color: "bg-slate-300" },
           ]}
         />
-        <VendorConcentrationChart vendors={topVendorsBySpend} totalValue={totalValue} currency="USD" />
+        <VendorConcentrationChart
+          vendors={topVendorsBySpend}
+          primaryCurrency={primaryCurrency}
+          primaryCurrencyTotal={primaryCurrencyTotal}
+        />
         <ExpiringHorizonChart
           segments={[
             { label: "Draft", value: draftCount, color: "bg-slate-300" },
@@ -398,4 +418,27 @@ function KpiTile({
   );
 
   return href ? <Link href={href}>{content}</Link> : content;
+}
+
+/**
+ * Contract value is stored per-currency with no FX conversion, so a single summed
+ * number would misrepresent the total the moment two currencies are in play. Show
+ * the largest currency's total prominently and any others beneath it instead.
+ */
+function ValueKpiTile({ currencyTotals }: { currencyTotals: { currency: string; value: number }[] }) {
+  const [primary, ...rest] = currencyTotals;
+
+  return (
+    <div className={`${panel} p-5`}>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total contract value</p>
+      <p className="mt-1 text-3xl font-bold tabular-nums text-slate-900">
+        {formatCurrency(primary?.value ?? 0, primary?.currency ?? "USD")}
+      </p>
+      {rest.length > 0 && (
+        <p className="mt-0.5 text-xs font-medium tabular-nums text-slate-500">
+          + {rest.map((c) => formatCurrency(c.value, c.currency)).join(" + ")}
+        </p>
+      )}
+    </div>
+  );
 }

@@ -11,6 +11,7 @@ interface VendorSpend {
   id: string;
   code: string;
   name: string;
+  currency: string;
   value: number;
   count: number;
 }
@@ -60,19 +61,25 @@ export function ContractStatusChart({ total, segments }: { total: number; segmen
   );
 }
 
-/** Ranked list of the top vendors by contract value, with each vendor's share of the total. */
+/**
+ * Ranked list of the top vendors by contract value, with each vendor's share of the total.
+ * Vendor values are shown in their own currency (never summed across currencies); the
+ * footer "% of total" is computed only against vendors billed in the largest currency,
+ * since a share spanning unlike currencies can't be computed without an FX rate.
+ */
 export function VendorConcentrationChart({
   vendors,
-  totalValue,
-  currency,
+  primaryCurrency,
+  primaryCurrencyTotal,
 }: {
   vendors: VendorSpend[];
-  totalValue: number;
-  currency: string;
+  primaryCurrency: string;
+  primaryCurrencyTotal: number;
 }) {
   const max = Math.max(1, ...vendors.map((v) => v.value));
-  const topSum = vendors.reduce((sum, v) => sum + v.value, 0);
-  const share = totalValue > 0 ? Math.round((topSum / totalValue) * 100) : 0;
+  const primaryCurrencyVendors = vendors.filter((v) => v.currency === primaryCurrency);
+  const topSum = primaryCurrencyVendors.reduce((sum, v) => sum + v.value, 0);
+  const share = primaryCurrencyTotal > 0 ? Math.round((topSum / primaryCurrencyTotal) * 100) : 0;
 
   return (
     <div className={`${panel} flex flex-col p-5`}>
@@ -96,7 +103,7 @@ export function VendorConcentrationChart({
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs font-bold tabular-nums text-slate-900">{formatCurrency(v.value, currency)}</p>
+              <p className="text-xs font-bold tabular-nums text-slate-900">{formatCurrency(v.value, v.currency)}</p>
               <p className="text-[10px] font-medium tabular-nums text-slate-400">
                 {v.count} contract{v.count === 1 ? "" : "s"}
               </p>
@@ -106,11 +113,12 @@ export function VendorConcentrationChart({
         {vendors.length === 0 && <p className="text-sm text-slate-400">No contract value on file yet.</p>}
       </div>
 
-      {totalValue > 0 && vendors.length > 0 && (
+      {primaryCurrencyTotal > 0 && primaryCurrencyVendors.length > 0 && (
         <p className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
-          Top {vendors.length} vendor{vendors.length === 1 ? "" : "s"} account for{" "}
+          Top {primaryCurrencyVendors.length} vendor{primaryCurrencyVendors.length === 1 ? "" : "s"} account for{" "}
           <span className="font-bold text-slate-900">{share}%</span> of the{" "}
-          <span className="font-bold text-slate-900">{formatCurrency(totalValue, currency)}</span> on file.
+          <span className="font-bold text-slate-900">{formatCurrency(primaryCurrencyTotal, primaryCurrency)}</span>{" "}
+          on file.
         </p>
       )}
     </div>
