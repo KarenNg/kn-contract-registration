@@ -2,7 +2,7 @@ import { Nav } from "@/components/Nav";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { sweepExpiredContracts } from "@/lib/contracts";
-import { isExpiringSoon, isInForce, type Contract } from "@/lib/types";
+import { isExpiringSoon, isInForce, isPastEndDate, type Contract, type ContractDocument } from "@/lib/types";
 
 export default async function AppLayout({
   children,
@@ -13,14 +13,25 @@ export default async function AppLayout({
   const supabase = await createClient();
   await sweepExpiredContracts(supabase);
 
-  const { data: contracts } = await supabase
-    .from("contracts")
-    .select("status, end_date, alert_acknowledged_at")
-    .in("status", ["active", "renewed", "expired"]);
+  const [{ data: contracts }, { data: documents }] = await Promise.all([
+    supabase
+      .from("contracts")
+      .select("status, end_date, alert_acknowledged_at")
+      .in("status", ["active", "renewed", "expired"]),
+    supabase
+      .from("contract_documents")
+      .select("expires_on, expiry_acknowledged_at")
+      .not("expires_on", "is", null)
+      .is("superseded_at", null),
+  ]);
 
-  const alertCount = ((contracts as Pick<Contract, "status" | "end_date" | "alert_acknowledged_at">[] | null) ?? []).filter(
+  const contractAlertCount = ((contracts as Pick<Contract, "status" | "end_date" | "alert_acknowledged_at">[] | null) ?? []).filter(
     (c) => (c.status === "expired" || (isInForce(c.status) && isExpiringSoon(c.end_date))) && !c.alert_acknowledged_at,
   ).length;
+  const documentAlertCount = ((documents as Pick<ContractDocument, "expires_on" | "expiry_acknowledged_at">[] | null) ?? []).filter(
+    (d) => (isPastEndDate(d.expires_on) || isExpiringSoon(d.expires_on)) && !d.expiry_acknowledged_at,
+  ).length;
+  const alertCount = contractAlertCount + documentAlertCount;
 
   return (
     <>

@@ -7,6 +7,7 @@ import { ContractStatusBadge } from "@/components/StatusBadge";
 import { deleteContract, updateContract } from "@/app/(app)/contracts/actions";
 import { renewContract, recordAmendment, terminateContract } from "@/app/(app)/contracts/lifecycle-actions";
 import {
+  acknowledgeDocumentExpiry,
   deleteContractDocument,
   replaceContractDocument,
   uploadContractDocument,
@@ -18,6 +19,7 @@ import {
   DOCUMENT_TYPES,
   isExpiringSoon,
   isInForce,
+  isPastEndDate,
   type Contract,
   type ContractDocument,
   type ContractEvent,
@@ -329,6 +331,7 @@ export default async function ContractDetailPage({
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Type</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Size</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Uploaded</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Expires</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -336,6 +339,9 @@ export default async function ContractDetailPage({
               {typedDocuments.map((doc) => {
                 const deleteDoc = deleteContractDocument.bind(null, id, doc.id, doc.file_path);
                 const replaceDoc = replaceContractDocument.bind(null, id, doc.id);
+                const acknowledgeExpiry = acknowledgeDocumentExpiry.bind(null, id, doc.id);
+                const expired = isPastEndDate(doc.expires_on);
+                const expiringSoon = !expired && isExpiringSoon(doc.expires_on);
                 return (
                   <tr key={doc.id} className="border-t border-slate-200 hover:bg-slate-50">
                     <td className="px-4 py-3">
@@ -353,14 +359,42 @@ export default async function ContractDetailPage({
                     </td>
                     <td className="px-4 py-3 text-slate-500">{formatBytes(doc.file_size)}</td>
                     <td className="px-4 py-3 text-slate-500">{formatDateTime(doc.uploaded_at)}</td>
+                    <td className="px-4 py-3 text-slate-500">
+                      <div className="flex items-center gap-2">
+                        {formatDate(doc.expires_on)}
+                        {(expired || expiringSoon) && !doc.expiry_acknowledged_at && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white ${
+                              expired ? "bg-red-600" : "bg-orange-500"
+                            }`}
+                          >
+                            {expired ? "⚠ Expired" : "⚠ Expiring soon"}
+                          </span>
+                        )}
+                      </div>
+                      {(expired || expiringSoon) && !doc.expiry_acknowledged_at && (
+                        <form action={acknowledgeExpiry} className="mt-1">
+                          <ConfirmSubmitButton
+                            confirmMessage="Acknowledge this document's expiry alert?"
+                            className="text-xs font-medium text-blue-600 hover:underline"
+                          >
+                            Acknowledge
+                          </ConfirmSubmitButton>
+                        </form>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
                         <details className="text-left">
                           <summary className="cursor-pointer px-1 py-1 text-xs font-medium text-blue-600 hover:underline">
                             Replace
                           </summary>
-                          <form action={replaceDoc} className="mt-2 flex items-center gap-2">
+                          <form action={replaceDoc} className="mt-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center">
                             <input type="file" name="file" required className="text-xs text-slate-700" />
+                            <label className="flex items-center gap-1 text-xs text-slate-500">
+                              Expires
+                              <input type="date" name="expires_on" defaultValue={doc.expires_on ?? ""} className="rounded border border-slate-300 px-1 py-0.5 text-xs" />
+                            </label>
                             <button type="submit" className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700">
                               Upload
                             </button>
@@ -378,7 +412,7 @@ export default async function ContractDetailPage({
               })}
               {typedDocuments.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                     No documents attached yet.
                   </td>
                 </tr>
@@ -404,6 +438,13 @@ export default async function ContractDetailPage({
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500">Expires on</label>
+            <input type="date" name="expires_on" className={`${input} mt-1`} />
+            <p className="mt-0.5 max-w-[160px] text-[11px] text-slate-400">
+              For insurance certificates and other compliance docs — tracked separately from the contract end date.
+            </p>
           </div>
           <div className="min-w-[160px] flex-1">
             <label className="block text-xs font-medium text-slate-500">Notes</label>

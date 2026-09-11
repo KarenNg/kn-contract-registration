@@ -6,7 +6,15 @@ import { ApplicationStatusBadge, ContractStatusBadge, ExpiringBadge } from "@/co
 import { ContractStatusChart, ExpiringHorizonChart, VendorConcentrationChart } from "@/components/DashboardCharts";
 import { VendorFilter } from "@/components/VendorFilter";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
-import { isClosed, isExpiringSoon, isInForce, type ContractWithVendor, type VendorApplication } from "@/lib/types";
+import {
+  isClosed,
+  isExpiringSoon,
+  isInForce,
+  isPastEndDate,
+  type ContractDocument,
+  type ContractWithVendor,
+  type VendorApplication,
+} from "@/lib/types";
 import { code, panel, panelHeader, severityStripe, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +62,19 @@ export default async function DashboardPage({
           .in("contract_id", allContracts.map((c) => c.id))
       : { count: 0 }
     : await supabase.from("contract_documents").select("*", { count: "exact", head: true });
+
+  const { data: expiringDocuments } = await supabase
+    .from("contract_documents")
+    .select("expires_on, expiry_acknowledged_at, contract_id")
+    .not("expires_on", "is", null)
+    .is("superseded_at", null);
+
+  const relevantDocuments = vendorId
+    ? (expiringDocuments ?? []).filter((d) => allContracts.some((c) => c.id === d.contract_id))
+    : expiringDocuments ?? [];
+  const documentsNeedingAttention = (
+    relevantDocuments as Pick<ContractDocument, "expires_on" | "expiry_acknowledged_at">[]
+  ).filter((d) => (isPastEndDate(d.expires_on) || isExpiringSoon(d.expires_on)) && !d.expiry_acknowledged_at);
   const expiring = allContracts.filter(
     (c) => isInForce(c.status) && isExpiringSoon(c.end_date),
   );
@@ -161,12 +182,18 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <KpiTile
           label="Requests pending review"
           value={pendingApplications.length}
           href="/requests"
           warn={pendingApplications.length > 0}
+        />
+        <KpiTile
+          label="Compliance docs expiring"
+          value={documentsNeedingAttention.length}
+          href="/alerts"
+          warn={documentsNeedingAttention.length > 0}
         />
         <Link
           href={applyHref}
