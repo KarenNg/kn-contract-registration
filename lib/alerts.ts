@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { isExpiringSoon, isInForce, isPastEndDate, type ContractStatus } from "@/lib/types";
+import { isExpiringSoon, isInForce, isPastEndDate, type ContractStatus, type RiskTier } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 interface AlertContract {
@@ -47,48 +47,69 @@ interface AlertOverspentContract {
   totalPaid: number;
 }
 
+interface AlertIncident {
+  id: string;
+  title: string;
+  severity: RiskTier;
+  occurred_on: string;
+  vendors: { id: string; name: string } | null;
+}
+
 export interface OrgAlerts {
   contracts: AlertContract[];
   documents: AlertDocument[];
   vendors: AlertVendor[];
   obligations: AlertObligation[];
   overspentContracts: AlertOverspentContract[];
+  openIncidents: AlertIncident[];
 }
 
 /** Everything in this org that's expiring/expired/due and hasn't been acknowledged or completed. */
 export async function getOrgAlerts(supabase: SupabaseClient, organizationId: string): Promise<OrgAlerts> {
-  const [{ data: contracts }, { data: documents }, { data: vendors }, { data: obligations }, { data: contractsWithPayments }] =
-    await Promise.all([
-      supabase
-        .from("contracts")
-        .select("id, contract_code, title, end_date, status, value, currency, owner_user_id, vendors(name)")
-        .eq("organization_id", organizationId)
-        .in("status", ["active", "renewed", "expired"])
-        .is("alert_acknowledged_at", null),
-      supabase
-        .from("contract_documents")
-        .select("id, file_name, document_type, expires_on, contracts(id, title, owner_user_id)")
-        .eq("organization_id", organizationId)
-        .not("expires_on", "is", null)
-        .is("superseded_at", null)
-        .is("expiry_acknowledged_at", null),
-      supabase
-        .from("vendors")
-        .select("id, name, compliance_doc_expires_on")
-        .eq("organization_id", organizationId)
-        .not("compliance_doc_expires_on", "is", null)
-        .is("compliance_doc_acknowledged_at", null),
-      supabase
-        .from("contract_obligations")
-        .select("id, title, due_date, amount, contracts(id, title, currency, owner_user_id)")
-        .eq("organization_id", organizationId)
-        .is("completed_at", null),
-      supabase
-        .from("contracts")
-        .select("id, contract_code, title, value, currency, owner_user_id, vendors(name), contract_payments(amount)")
-        .eq("organization_id", organizationId)
-        .not("value", "is", null),
-    ]);
+  const [
+    { data: contracts },
+    { data: documents },
+    { data: vendors },
+    { data: obligations },
+    { data: contractsWithPayments },
+    { data: incidents },
+  ] = await Promise.all([
+    supabase
+      .from("contracts")
+      .select("id, contract_code, title, end_date, status, value, currency, owner_user_id, vendors(name)")
+      .eq("organization_id", organizationId)
+      .in("status", ["active", "renewed", "expired"])
+      .is("alert_acknowledged_at", null),
+    supabase
+      .from("contract_documents")
+      .select("id, file_name, document_type, expires_on, contracts(id, title, owner_user_id)")
+      .eq("organization_id", organizationId)
+      .not("expires_on", "is", null)
+      .is("superseded_at", null)
+      .is("expiry_acknowledged_at", null),
+    supabase
+      .from("vendors")
+      .select("id, name, compliance_doc_expires_on")
+      .eq("organization_id", organizationId)
+      .not("compliance_doc_expires_on", "is", null)
+      .is("compliance_doc_acknowledged_at", null),
+    supabase
+      .from("contract_obligations")
+      .select("id, title, due_date, amount, contracts(id, title, currency, owner_user_id)")
+      .eq("organization_id", organizationId)
+      .is("completed_at", null),
+    supabase
+      .from("contracts")
+      .select("id, contract_code, title, value, currency, owner_user_id, vendors(name), contract_payments(amount)")
+      .eq("organization_id", organizationId)
+      .not("value", "is", null),
+    supabase
+      .from("vendor_incidents")
+      .select("id, title, severity, occurred_on, vendors(id, name)")
+      .eq("organization_id", organizationId)
+      .in("severity", ["high", "critical"])
+      .is("resolved_at", null),
+  ]);
 
   const relevantContracts = ((contracts as unknown as AlertContract[]) ?? []).filter(
     (c) => c.status === "expired" || (isInForce(c.status) && isExpiringSoon(c.end_date)),
@@ -126,12 +147,15 @@ export async function getOrgAlerts(supabase: SupabaseClient, organizationId: str
     }))
     .filter((c) => c.totalPaid > c.value);
 
+  const relevantOpenIncidents = (incidents as unknown as AlertIncident[]) ?? [];
+
   return {
     contracts: relevantContracts,
     documents: relevantDocuments,
     vendors: relevantVendors,
     obligations: relevantObligations,
     overspentContracts: relevantOverspentContracts,
+    openIncidents: relevantOpenIncidents,
   };
 }
 
@@ -143,6 +167,7 @@ export function scopeAlertsToOwner(alerts: OrgAlerts, userId: string): OrgAlerts
     vendors: [],
     obligations: alerts.obligations.filter((o) => o.contracts?.owner_user_id === userId),
     overspentContracts: alerts.overspentContracts.filter((c) => c.owner_user_id === userId),
+    openIncidents: [],
   };
 }
 
@@ -152,7 +177,8 @@ export function alertsAreEmpty(alerts: OrgAlerts): boolean {
     alerts.documents.length === 0 &&
     alerts.vendors.length === 0 &&
     alerts.obligations.length === 0 &&
-    alerts.overspentContracts.length === 0
+    alerts.overspentContracts.length === 0 &&
+    alerts.openIncidents.length === 0
   );
 }
 
@@ -162,7 +188,8 @@ export function renderDigestEmail(organizationName: string, alerts: OrgAlerts): 
     alerts.documents.length +
     alerts.vendors.length +
     alerts.obligations.length +
-    alerts.overspentContracts.length;
+    alerts.overspentContracts.length +
+    alerts.openIncidents.length;
   const subject = `${organizationName}: ${total} item${total === 1 ? "" : "s"} need${total === 1 ? "s" : ""} attention`;
 
   const row = (label: string, detail: string) =>
@@ -208,6 +235,10 @@ export function renderDigestEmail(organizationName: string, alerts: OrgAlerts): 
     )
     .join("");
 
+  const incidentsHtml = alerts.openIncidents
+    .map((i) => row(`${i.title}${i.vendors ? ` (${i.vendors.name})` : ""}`, `${i.severity} severity · occurred ${formatDate(i.occurred_on)}`))
+    .join("");
+
   const section = (title: string, itemsHtml: string) =>
     itemsHtml
       ? `<h3 style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin:20px 0 4px">${title}</h3><ul style="list-style:none;padding:0;margin:0">${itemsHtml}</ul>`
@@ -221,6 +252,7 @@ export function renderDigestEmail(organizationName: string, alerts: OrgAlerts): 
       ${section("Vendor compliance documents", vendorsHtml)}
       ${section("Obligations &amp; milestones", obligationsHtml)}
       ${section("Budget variance", overspentHtml)}
+      ${section("Vendor risk incidents", incidentsHtml)}
       <p style="margin-top:24px;font-size:13px;color:#94a3b8">Open ContractOps to renew, terminate, or acknowledge each one.</p>
     </div>
   `;

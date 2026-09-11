@@ -21,6 +21,9 @@ function fromFormData(formData: FormData) {
     strategic_tier: String(formData.get("strategic_tier") ?? "").trim() || null,
     performance_rating: String(formData.get("performance_rating") ?? "").trim() || null,
     last_performance_review_at: String(formData.get("last_performance_review_at") ?? "").trim() || null,
+    financial_risk_tier: String(formData.get("financial_risk_tier") ?? "").trim() || null,
+    security_risk_tier: String(formData.get("security_risk_tier") ?? "").trim() || null,
+    operational_risk_tier: String(formData.get("operational_risk_tier") ?? "").trim() || null,
   };
 }
 
