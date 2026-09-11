@@ -16,7 +16,13 @@ import {
   replaceContractDocument,
   uploadContractDocument,
 } from "@/app/(app)/contracts/documents-actions";
-import { formatBytes, formatDate, formatDateTime } from "@/lib/format";
+import {
+  addObligation,
+  completeObligation,
+  deleteObligation,
+} from "@/app/(app)/contracts/obligations-actions";
+import { addPayment, deletePayment } from "@/app/(app)/contracts/payments-actions";
+import { formatBytes, formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import { getDocumentPublicUrl } from "@/lib/storage";
 import {
   CONTRACT_STATUSES,
@@ -27,6 +33,8 @@ import {
   type Contract,
   type ContractDocument,
   type ContractEvent,
+  type ContractObligation,
+  type ContractPayment,
   type Vendor,
 } from "@/lib/types";
 import {
@@ -81,6 +89,18 @@ export default async function ContractDetailPage({
     .eq("contract_id", id)
     .order("created_at", { ascending: false });
 
+  const { data: obligations } = await supabase
+    .from("contract_obligations")
+    .select("*")
+    .eq("contract_id", id)
+    .order("due_date", { ascending: true });
+
+  const { data: payments } = await supabase
+    .from("contract_payments")
+    .select("*")
+    .eq("contract_id", id)
+    .order("payment_date", { ascending: false });
+
   const typedContract = contract as Contract & { vendors: Vendor | null };
   const typedVendors = (vendors ?? []) as Pick<Vendor, "id" | "name" | "vendor_code">[];
   const allDocuments = (documents as ContractDocument[] | null) ?? [];
@@ -88,6 +108,14 @@ export default async function ContractDetailPage({
   const supersededDocuments = allDocuments.filter((doc) => doc.superseded_at);
   const documentById = new Map(allDocuments.map((doc) => [doc.id, doc]));
   const typedEvents = (events as ContractEvent[] | null) ?? [];
+  const allObligations = (obligations as ContractObligation[] | null) ?? [];
+  const openObligations = allObligations.filter((o) => !o.completed_at);
+  const completedObligations = allObligations.filter((o) => o.completed_at);
+
+  const allPayments = (payments as ContractPayment[] | null) ?? [];
+  const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
+  const remainingBudget = typedContract.value != null ? typedContract.value - totalPaid : null;
+  const overBudget = remainingBudget != null && remainingBudget < 0;
 
   const updateContractWithId = updateContract.bind(null, id);
   const deleteContractWithId = deleteContract.bind(null, typedContract.vendor_id, id);
@@ -95,6 +123,8 @@ export default async function ContractDetailPage({
   const renewContractWithId = renewContract.bind(null, id);
   const recordAmendmentWithId = recordAmendment.bind(null, id);
   const terminateContractWithId = terminateContract.bind(null, id);
+  const addObligationWithId = addObligation.bind(null, id);
+  const addPaymentWithId = addPayment.bind(null, id);
 
   const inForce = isInForce(typedContract.status);
   const expiring = inForce && isExpiringSoon(typedContract.end_date);
@@ -534,6 +564,246 @@ export default async function ContractDetailPage({
               })}
             </ul>
           </details>
+        )}
+      </div>
+
+      <div className={panel}>
+        <div className={panelHeader}>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Obligations ({openObligations.length} open)
+          </h2>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Obligation</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Due date</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Amount</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {openObligations.map((obligation) => {
+                const overdue = isPastEndDate(obligation.due_date);
+                const dueSoon = !overdue && isExpiringSoon(obligation.due_date, 14);
+                const complete = completeObligation.bind(null, id, obligation.id);
+                const remove = deleteObligation.bind(null, id, obligation.id);
+                return (
+                  <tr key={obligation.id} className="border-t border-slate-200 hover:bg-slate-50">
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-slate-900">{obligation.title}</span>
+                      {obligation.notes && <p className="mt-0.5 text-xs text-slate-500">{obligation.notes}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      <div className="flex items-center gap-2">
+                        {formatDate(obligation.due_date)}
+                        {(overdue || dueSoon) && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white ${
+                              overdue ? "bg-red-600" : "bg-orange-500"
+                            }`}
+                          >
+                            {overdue ? "⚠ Overdue" : "⚠ Due soon"}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {obligation.amount != null ? formatCurrency(obligation.amount, typedContract.currency) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canManage && (
+                        <div className="flex items-center justify-end gap-3">
+                          <form action={complete}>
+                            <ConfirmSubmitButton
+                              confirmMessage="Mark this obligation complete?"
+                              className="text-xs font-semibold text-blue-600 hover:underline"
+                            >
+                              Mark complete
+                            </ConfirmSubmitButton>
+                          </form>
+                          <form action={remove}>
+                            <ConfirmSubmitButton
+                              confirmMessage="Delete this obligation?"
+                              className="text-xs font-medium text-red-600 hover:underline"
+                            >
+                              Delete
+                            </ConfirmSubmitButton>
+                          </form>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {openObligations.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                    No open obligations.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {canManage && (
+          <form
+            action={addObligationWithId}
+            className="flex flex-wrap items-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4"
+          >
+            <div className="min-w-[200px] flex-1">
+              <label className="block text-xs font-medium text-slate-500">Obligation</label>
+              <input name="title" required placeholder="e.g. Q1 deliverable, milestone payment" className={`${input} mt-1`} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500">Due date</label>
+              <input type="date" name="due_date" required className={`${input} mt-1`} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500">Amount (optional)</label>
+              <input type="number" step="0.01" name="amount" className={`${input} mt-1`} />
+            </div>
+            <div className="min-w-[160px] flex-1">
+              <label className="block text-xs font-medium text-slate-500">Notes</label>
+              <input name="notes" className={`${input} mt-1`} />
+            </div>
+            <button type="submit" className={primaryButton}>
+              Add obligation
+            </button>
+          </form>
+        )}
+
+        {completedObligations.length > 0 && (
+          <details className="border-t border-slate-200 px-6 py-4">
+            <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Completed ({completedObligations.length})
+            </summary>
+            <ul className="mt-3 space-y-2 text-sm">
+              {completedObligations.map((obligation) => (
+                <li key={obligation.id} className="flex flex-wrap items-center justify-between gap-2 text-slate-600">
+                  <span className="line-through">{obligation.title}</span>
+                  <span className="text-xs text-slate-400">
+                    due {formatDate(obligation.due_date)} · completed {formatDateTime(obligation.completed_at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
+
+      <div className={panel}>
+        <div className={panelHeader}>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Payments ({allPayments.length})
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 p-6 sm:grid-cols-3">
+          <InfoBox label="Budgeted value" value={formatCurrency(typedContract.value, typedContract.currency)} />
+          <InfoBox label="Total paid" value={formatCurrency(totalPaid, typedContract.currency)} />
+          <div className={`px-4 py-3 ${panel} ${overBudget ? "border-red-300 bg-red-50" : ""}`}>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              {overBudget ? "Over budget by" : "Remaining budget"}
+            </p>
+            <p className={`mt-0.5 text-sm font-semibold ${overBudget ? "text-red-700" : "text-slate-900"}`}>
+              {remainingBudget != null
+                ? formatCurrency(Math.abs(remainingBudget), typedContract.currency)
+                : "No budgeted value set"}
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto border-t border-slate-200">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Date</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Amount</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Reference</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {allPayments.map((payment) => {
+                const remove = deletePayment.bind(null, id, payment.id);
+                return (
+                  <tr key={payment.id} className="border-t border-slate-200 hover:bg-slate-50">
+                    <td className="px-4 py-3 text-slate-500">{formatDate(payment.payment_date)}</td>
+                    <td className="px-4 py-3 font-medium text-slate-900">
+                      {formatCurrency(payment.amount, typedContract.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-slate-500">
+                      {payment.reference ?? "—"}
+                      {payment.notes && <p className="mt-0.5 text-xs text-slate-400">{payment.notes}</p>}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canManage && (
+                        <form action={remove}>
+                          <ConfirmSubmitButton
+                            confirmMessage="Delete this payment record?"
+                            className="text-xs font-medium text-red-600 hover:underline"
+                          >
+                            Delete
+                          </ConfirmSubmitButton>
+                        </form>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {allPayments.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                    No payments recorded yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {canManage && (
+          <form
+            action={addPaymentWithId}
+            className="flex flex-wrap items-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4"
+          >
+            <div>
+              <label className="block text-xs font-medium text-slate-500">Amount</label>
+              <input type="number" step="0.01" name="amount" required className={`${input} mt-1`} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500">Payment date</label>
+              <input type="date" name="payment_date" required className={`${input} mt-1`} />
+            </div>
+            <div className="min-w-[140px]">
+              <label className="block text-xs font-medium text-slate-500">Reference (optional)</label>
+              <input name="reference" placeholder="Invoice #" className={`${input} mt-1`} />
+            </div>
+            {allObligations.length > 0 && (
+              <div className="min-w-[180px]">
+                <label className="block text-xs font-medium text-slate-500">Obligation (optional)</label>
+                <select name="obligation_id" defaultValue="" className={`${input} mt-1`}>
+                  <option value="">— None —</option>
+                  {allObligations.map((obligation) => (
+                    <option key={obligation.id} value={obligation.id}>
+                      {obligation.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="min-w-[160px] flex-1">
+              <label className="block text-xs font-medium text-slate-500">Notes</label>
+              <input name="notes" className={`${input} mt-1`} />
+            </div>
+            <button type="submit" className={primaryButton}>
+              Record payment
+            </button>
+          </form>
         )}
       </div>
 

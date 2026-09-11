@@ -13,6 +13,7 @@ import {
   isInForce,
   isPastEndDate,
   type ContractDocument,
+  type ContractObligation,
   type ContractWithVendor,
   type VendorApplication,
 } from "@/lib/types";
@@ -41,6 +42,7 @@ export default async function DashboardPage({
   const [
     { count: vendorCount },
     { count: highRiskVendorCount },
+    { count: strategicHighRiskVendorCount },
     { data: vendorOptions },
     { data: contracts },
     { data: applications },
@@ -50,6 +52,12 @@ export default async function DashboardPage({
       .from("vendors")
       .select("*", { count: "exact", head: true })
       .in("risk_tier", ["high", "critical"])
+      .eq("status", "active"),
+    supabase
+      .from("vendors")
+      .select("*", { count: "exact", head: true })
+      .in("risk_tier", ["high", "critical"])
+      .eq("strategic_tier", "strategic")
       .eq("status", "active"),
     supabase.from("vendors").select("id, vendor_code, name").order("name"),
     contractsQuery,
@@ -77,6 +85,13 @@ export default async function DashboardPage({
     .not("expires_on", "is", null)
     .is("superseded_at", null);
 
+  const { data: openObligations } = await supabase
+    .from("contract_obligations")
+    .select("due_date, completed_at, contract_id")
+    .is("completed_at", null);
+
+  const { data: paymentRows } = await supabase.from("contract_payments").select("amount, contract_id");
+
   const relevantDocuments = vendorId
     ? (expiringDocuments ?? []).filter((d) => allContracts.some((c) => c.id === d.contract_id))
     : expiringDocuments ?? [];
@@ -86,6 +101,13 @@ export default async function DashboardPage({
   const expiring = allContracts.filter(
     (c) => isInForce(c.status) && isExpiringSoon(c.end_date),
   );
+
+  const relevantObligations = vendorId
+    ? (openObligations ?? []).filter((o) => allContracts.some((c) => c.id === o.contract_id))
+    : openObligations ?? [];
+  const obligationsNeedingAttention = (
+    relevantObligations as Pick<ContractObligation, "due_date" | "completed_at">[]
+  ).filter((o) => isPastEndDate(o.due_date) || isExpiringSoon(o.due_date, 14));
 
   const allApplications = (applications as VendorApplication[] | null) ?? [];
   const pendingApplications = allApplications.filter(
@@ -131,6 +153,26 @@ export default async function DashboardPage({
   const primaryCurrency = currencyTotals[0]?.currency ?? "USD";
   const primaryCurrencyTotal = currencyTotals[0]?.value ?? 0;
 
+  // Actual spend recorded per contract, rolled up by that contract's own currency —
+  // budgeted (contract.value) and paid (contract_payments) must never be mixed across currencies.
+  const contractById = new Map(allContracts.map((c) => [c.id, c]));
+  const paidByContract = new Map<string, number>();
+  for (const p of paymentRows ?? []) {
+    if (!contractById.has(p.contract_id)) continue;
+    paidByContract.set(p.contract_id, (paidByContract.get(p.contract_id) ?? 0) + p.amount);
+  }
+  const paidByCurrency = new Map<string, number>();
+  for (const [contractId, paid] of paidByContract) {
+    const currency = contractById.get(contractId)!.currency;
+    paidByCurrency.set(currency, (paidByCurrency.get(currency) ?? 0) + paid);
+  }
+  const paidCurrencyTotals = [...paidByCurrency.entries()]
+    .map(([currency, value]) => ({ currency, value }))
+    .sort((a, b) => b.value - a.value);
+  const overBudgetCount = allContracts.filter(
+    (c) => c.value != null && (paidByContract.get(c.id) ?? 0) > c.value,
+  ).length;
+
   const vendorSpend = new Map<
     string,
     { id: string; code: string; name: string; currency: string; value: number; count: number }
@@ -170,11 +212,12 @@ export default async function DashboardPage({
         <VendorFilter vendors={vendorOptions ?? []} selectedVendorId={vendorId} />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <KpiTile label="Vendors" value={vendorCount ?? 0} href="/vendors" />
         <KpiTile label="Contracts" value={contractCount} href="/contracts" />
         <KpiTile label="Documents on file" value={documentCount ?? 0} />
-        <ValueKpiTile currencyTotals={currencyTotals} />
+        <ValueKpiTile label="Total contract value" currencyTotals={currencyTotals} />
+        <ValueKpiTile label="Spend recorded" currencyTotals={paidCurrencyTotals} />
         <KpiTile
           label="Expiring within 60 days"
           value={expiring.length}
@@ -210,7 +253,7 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
         <KpiTile
           label="Requests pending review"
           value={pendingApplications.length}
@@ -224,10 +267,28 @@ export default async function DashboardPage({
           warn={documentsNeedingAttention.length > 0}
         />
         <KpiTile
+          label="Obligations due"
+          value={obligationsNeedingAttention.length}
+          href="/alerts"
+          warn={obligationsNeedingAttention.length > 0}
+        />
+        <KpiTile
+          label="Contracts over budget"
+          value={overBudgetCount}
+          href="/alerts"
+          warn={overBudgetCount > 0}
+        />
+        <KpiTile
           label="High/critical risk vendors"
           value={highRiskVendorCount ?? 0}
           href="/vendors?risk=high"
           warn={(highRiskVendorCount ?? 0) > 0}
+        />
+        <KpiTile
+          label="Strategic vendors at high risk"
+          value={strategicHighRiskVendorCount ?? 0}
+          href="/vendors?risk=high&segment=strategic"
+          warn={(strategicHighRiskVendorCount ?? 0) > 0}
         />
         <Link
           href={applyHref}
@@ -447,12 +508,18 @@ function KpiTile({
  * number would misrepresent the total the moment two currencies are in play. Show
  * the largest currency's total prominently and any others beneath it instead.
  */
-function ValueKpiTile({ currencyTotals }: { currencyTotals: { currency: string; value: number }[] }) {
+function ValueKpiTile({
+  label,
+  currencyTotals,
+}: {
+  label: string;
+  currencyTotals: { currency: string; value: number }[];
+}) {
   const [primary, ...rest] = currencyTotals;
 
   return (
     <div className={`${panel} p-5`}>
-      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total contract value</p>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
       <p className="mt-1 text-3xl font-bold tabular-nums text-slate-900">
         {formatCurrency(primary?.value ?? 0, primary?.currency ?? "USD")}
       </p>

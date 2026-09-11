@@ -5,7 +5,14 @@ import { requireProfile } from "@/lib/auth";
 import { sweepExpiredContracts } from "@/lib/contracts";
 import { canMutate } from "@/lib/permissions";
 import { VendorForm } from "@/components/VendorForm";
-import { ContractStatusBadge, ExpiringBadge, RiskTierBadge, VendorStatusBadge } from "@/components/StatusBadge";
+import {
+  ContractStatusBadge,
+  ExpiringBadge,
+  PerformanceRatingBadge,
+  RiskTierBadge,
+  StrategicTierBadge,
+  VendorStatusBadge,
+} from "@/components/StatusBadge";
 import { acknowledgeVendorComplianceExpiry, deleteVendor, updateVendor } from "@/app/(app)/vendors/actions";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -81,9 +88,11 @@ export default async function VendorDetailPage({
           <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900">
             {(vendor as Vendor).name}
           </h1>
-          <div className="mt-2 flex items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <VendorStatusBadge status={(vendor as Vendor).status} />
             <RiskTierBadge tier={typedVendor.risk_tier} />
+            <StrategicTierBadge tier={typedVendor.strategic_tier} />
+            <PerformanceRatingBadge rating={typedVendor.performance_rating} />
           </div>
         </div>
         {canEdit && (
@@ -123,6 +132,7 @@ export default async function VendorDetailPage({
         <Field label="Address" value={(vendor as Vendor).address} />
         <Field label="Last risk review" value={formatDate(typedVendor.last_risk_review_at)} />
         <Field label="Compliance doc expires" value={formatDate(typedVendor.compliance_doc_expires_on)} />
+        <Field label="Last performance review" value={formatDate(typedVendor.last_performance_review_at)} />
         {(vendor as Vendor).notes && (
           <div className="sm:col-span-2">
             <Field label="Notes" value={(vendor as Vendor).notes} />
