@@ -5,6 +5,13 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 export type Role = "admin" | "contract_owner" | "management";
 
+export interface MembershipSummary {
+  organizationId: string;
+  organizationName: string;
+  organizationSlug: string;
+  role: Role;
+}
+
 export interface CurrentProfile {
   userId: string;
   email: string | null;
@@ -14,6 +21,8 @@ export interface CurrentProfile {
   organizationName: string;
   organizationSlug: string;
   isPlatformAdmin: boolean;
+  /** Every company this person belongs to — lets them switch without a separate account per company. */
+  memberships: MembershipSummary[];
 }
 
 export function slugify(name: string): string {
@@ -26,14 +35,14 @@ export function slugify(name: string): string {
 }
 
 /**
- * Creates the organization + profile for a signed-in user who doesn't have one
- * yet. Needed both right after signup and as a self-heal fallback: when the
- * Supabase project requires email confirmation, signUp() returns no session,
- * so the org can't be created until the user actually logs in later.
+ * Creates the profile + first membership for a signed-in user who doesn't
+ * have a profile yet. Needed both right after signup and as a self-heal
+ * fallback: when the Supabase project requires email confirmation,
+ * signUp() returns no session, so nothing can be created until the user
+ * actually logs in later.
  *
- * If an admin invited this email address first, join that org with the
- * invited role instead of creating a brand-new one — the DB trigger deletes
- * the consumed invite row once the profile insert succeeds.
+ * If an admin invited this email address first, join that org (as a new
+ * membership) with the invited role instead of creating a brand-new one.
  */
 export async function provisionOrganization(
   supabase: SupabaseServerClient,
@@ -49,22 +58,33 @@ export async function provisionOrganization(
   if (user.email) {
     const { data: invite } = await supabase
       .from("organization_invites")
-      .select("organization_id, role")
+      .select("id, organization_id, role")
       .ilike("email", user.email)
       .maybeSingle();
 
     if (invite) {
-      const { error: joinError } = await supabase.from("profiles").insert({
+      const { error: profileError } = await supabase.from("profiles").insert({
         id: user.id,
-        organization_id: invite.organization_id,
+        active_organization_id: invite.organization_id,
         full_name: fullName,
         email: user.email,
+      });
+
+      if (profileError && profileError.code !== "23505") {
+        throw new Error(profileError.message);
+      }
+
+      const { error: membershipError } = await supabase.from("memberships").insert({
+        user_id: user.id,
+        organization_id: invite.organization_id,
         role: invite.role,
       });
 
-      if (joinError && joinError.code !== "23505") {
-        throw new Error(joinError.message);
+      if (membershipError && membershipError.code !== "23505") {
+        throw new Error(membershipError.message);
       }
+
+      await supabase.from("organization_invites").delete().eq("id", invite.id);
       return;
     }
   }
@@ -102,10 +122,9 @@ export async function provisionOrganization(
 
   const { error: profileError } = await supabase.from("profiles").insert({
     id: user.id,
-    organization_id: organizationId,
+    active_organization_id: organizationId,
     full_name: fullName,
     email: user.email ?? null,
-    role: "admin",
   });
 
   if (profileError) {
@@ -118,6 +137,22 @@ export async function provisionOrganization(
     }
     throw new Error(profileError.message);
   }
+
+  const { error: membershipError } = await supabase.from("memberships").insert({
+    user_id: user.id,
+    organization_id: organizationId,
+    role: "admin",
+  });
+
+  if (membershipError) {
+    throw new Error(membershipError.message);
+  }
+}
+
+interface RawMembershipRow {
+  organization_id: string;
+  role: Role;
+  organizations: { id: string; name: string; slug: string } | null;
 }
 
 export async function requireProfile(): Promise<CurrentProfile> {
@@ -130,39 +165,58 @@ export async function requireProfile(): Promise<CurrentProfile> {
     redirect("/login");
   }
 
-  let { data: profile } = await supabase
-    .from("profiles")
-    .select("full_name, role, is_platform_admin, organizations(id, name, slug)")
-    .eq("id", user.id)
-    .single();
+  const fetchProfileAndMemberships = async () => {
+    const [{ data: profile }, { data: memberships }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("full_name, is_platform_admin, active_organization_id")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("memberships")
+        .select("organization_id, role, organizations(id, name, slug)")
+        .eq("user_id", user.id),
+    ]);
+    return { profile, memberships: (memberships as RawMembershipRow[] | null) ?? [] };
+  };
 
-  if (!profile || !profile.organizations) {
+  let { profile, memberships } = await fetchProfileAndMemberships();
+
+  if (!profile || memberships.length === 0) {
     await provisionOrganization(supabase, user);
-    ({ data: profile } = await supabase
-      .from("profiles")
-      .select("full_name, role, is_platform_admin, organizations(id, name, slug)")
-      .eq("id", user.id)
-      .single());
+    ({ profile, memberships } = await fetchProfileAndMemberships());
   }
 
-  if (!profile || !profile.organizations) {
+  if (!profile || memberships.length === 0) {
     redirect("/login");
   }
 
-  const organization = profile.organizations as unknown as {
-    id: string;
-    name: string;
-    slug: string;
-  };
+  const membershipSummaries: MembershipSummary[] = memberships
+    .filter((m) => m.organizations)
+    .map((m) => ({
+      organizationId: m.organization_id,
+      organizationName: m.organizations!.name,
+      organizationSlug: m.organizations!.slug,
+      role: m.role,
+    }));
+
+  const active =
+    membershipSummaries.find((m) => m.organizationId === profile.active_organization_id) ??
+    membershipSummaries[0];
+
+  if (!active) {
+    redirect("/login");
+  }
 
   return {
     userId: user.id,
     email: user.email ?? null,
     fullName: profile.full_name,
-    role: (profile.role as Role) ?? "management",
-    organizationId: organization.id,
-    organizationName: organization.name,
-    organizationSlug: organization.slug,
+    role: active.role,
+    organizationId: active.organizationId,
+    organizationName: active.organizationName,
+    organizationSlug: active.organizationSlug,
     isPlatformAdmin: profile.is_platform_admin ?? false,
+    memberships: membershipSummaries,
   };
 }

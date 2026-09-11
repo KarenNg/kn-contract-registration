@@ -10,14 +10,14 @@ const ROLES: Role[] = ["admin", "contract_owner", "management"];
 async function assertNotLastAdmin(
   supabase: Awaited<ReturnType<typeof createClient>>,
   organizationId: string,
-  excludingProfileId: string,
+  excludingUserId: string,
 ) {
   const { count } = await supabase
-    .from("profiles")
+    .from("memberships")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", organizationId)
     .eq("role", "admin")
-    .neq("id", excludingProfileId);
+    .neq("user_id", excludingUserId);
 
   if (!count) {
     throw new Error("This organization needs at least one admin — assign another admin first.");
@@ -45,7 +45,7 @@ export async function inviteMember(formData: FormData) {
   if (error) {
     throw new Error(
       error.code === "23505"
-        ? "That email already has a pending invite or is already a member."
+        ? "That email already has a pending invite to this company."
         : error.message,
     );
   }
@@ -65,7 +65,7 @@ export async function cancelInvite(inviteId: string) {
   revalidatePath("/team");
 }
 
-export async function changeMemberRole(memberId: string, formData: FormData) {
+export async function changeMemberRole(memberUserId: string, formData: FormData) {
   const profile = await requireProfile();
   assertIsAdmin(profile.role);
 
@@ -75,23 +75,32 @@ export async function changeMemberRole(memberId: string, formData: FormData) {
   const supabase = await createClient();
 
   if (role !== "admin") {
-    await assertNotLastAdmin(supabase, profile.organizationId, memberId);
+    await assertNotLastAdmin(supabase, profile.organizationId, memberUserId);
   }
 
-  const { error } = await supabase.from("profiles").update({ role }).eq("id", memberId);
+  const { error } = await supabase
+    .from("memberships")
+    .update({ role })
+    .eq("user_id", memberUserId)
+    .eq("organization_id", profile.organizationId);
   if (error) throw new Error(error.message);
 
   revalidatePath("/team");
 }
 
-export async function removeMember(memberId: string) {
+/** Removes this person from THIS company only — they may still belong to others. */
+export async function removeMember(memberUserId: string) {
   const profile = await requireProfile();
   assertIsAdmin(profile.role);
 
   const supabase = await createClient();
-  await assertNotLastAdmin(supabase, profile.organizationId, memberId);
+  await assertNotLastAdmin(supabase, profile.organizationId, memberUserId);
 
-  const { error } = await supabase.from("profiles").delete().eq("id", memberId);
+  const { error } = await supabase
+    .from("memberships")
+    .delete()
+    .eq("user_id", memberUserId)
+    .eq("organization_id", profile.organizationId);
   if (error) throw new Error(error.message);
 
   revalidatePath("/team");

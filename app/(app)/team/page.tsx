@@ -15,10 +15,9 @@ const ROLES = [
 ] as const;
 
 interface MemberRow {
-  id: string;
-  email: string | null;
-  full_name: string | null;
+  user_id: string;
   role: string;
+  profiles: { email: string | null; full_name: string | null } | null;
 }
 
 interface InviteRow {
@@ -38,8 +37,8 @@ export default async function TeamPage() {
 
   const [{ data: members }, { data: invites }] = await Promise.all([
     supabase
-      .from("profiles")
-      .select("id, email, full_name, role")
+      .from("memberships")
+      .select("user_id, role, profiles(email, full_name)")
       .eq("organization_id", profile.organizationId)
       .order("created_at"),
     supabase
@@ -78,15 +77,15 @@ export default async function TeamPage() {
             </thead>
             <tbody>
               {typedMembers.map((member) => {
-                const updateRole = changeMemberRole.bind(null, member.id);
-                const remove = removeMember.bind(null, member.id);
-                const isSelf = member.id === profile.userId;
+                const updateRole = changeMemberRole.bind(null, member.user_id);
+                const remove = removeMember.bind(null, member.user_id);
+                const isSelf = member.user_id === profile.userId;
                 return (
-                  <tr key={member.id} className={tr}>
+                  <tr key={member.user_id} className={tr}>
                     <td className="px-4 py-3 font-medium text-slate-900">
-                      {member.full_name ?? "—"} {isSelf && <span className="text-slate-400">(you)</span>}
+                      {member.profiles?.full_name ?? "—"} {isSelf && <span className="text-slate-400">(you)</span>}
                     </td>
-                    <td className={td}>{member.email ?? "—"}</td>
+                    <td className={td}>{member.profiles?.email ?? "—"}</td>
                     <td className="px-4 py-3">
                       <form action={updateRole} className="flex items-center gap-2">
                         <select name="role" defaultValue={member.role} className={`${input} mt-0 w-auto`}>
@@ -104,7 +103,7 @@ export default async function TeamPage() {
                     <td className="px-4 py-3 text-right">
                       <form action={remove}>
                         <ConfirmSubmitButton
-                          confirmMessage={`Remove ${member.full_name ?? member.email} from this organization?`}
+                          confirmMessage={`Remove ${member.profiles?.full_name ?? member.profiles?.email} from this organization?`}
                           className="text-xs font-medium text-red-600 hover:underline"
                         >
                           Remove
@@ -179,8 +178,9 @@ export default async function TeamPage() {
           </button>
         </form>
         <p className="border-t border-slate-100 px-6 py-3 text-xs text-slate-400">
-          Invites are consumed automatically the moment that email address signs up — no email is sent yet, so
-          share the signup link with them directly.
+          No email is sent yet — share the signup link directly. A brand-new email joins this company automatically
+          on signup; someone who already has an account elsewhere will see an Accept/Decline banner next time they
+          sign in, and can belong to both companies at once.
         </p>
       </div>
 

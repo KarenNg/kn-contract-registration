@@ -1,5 +1,7 @@
 import { Nav } from "@/components/Nav";
+import { InvitationsBanner, type PendingInvite } from "@/components/InvitationsBanner";
 import { requireProfile } from "@/lib/auth";
+import { switchActiveOrganization } from "@/lib/auth-actions";
 import { createClient } from "@/lib/supabase/server";
 import { sweepExpiredContracts } from "@/lib/contracts";
 import { isExpiringSoon, isInForce, isPastEndDate, type Contract, type ContractDocument } from "@/lib/types";
@@ -13,7 +15,7 @@ export default async function AppLayout({
   const supabase = await createClient();
   await sweepExpiredContracts(supabase);
 
-  const [{ data: contracts }, { data: documents }] = await Promise.all([
+  const [{ data: contracts }, { data: documents }, { data: invites }] = await Promise.all([
     supabase
       .from("contracts")
       .select("status, end_date, alert_acknowledged_at")
@@ -23,6 +25,12 @@ export default async function AppLayout({
       .select("expires_on, expiry_acknowledged_at")
       .not("expires_on", "is", null)
       .is("superseded_at", null),
+    profile.email
+      ? supabase
+          .from("organization_invites")
+          .select("id, role, organizations(name)")
+          .ilike("email", profile.email)
+      : Promise.resolve({ data: [] as PendingInvite[] }),
   ]);
 
   const contractAlertCount = ((contracts as Pick<Contract, "status" | "end_date" | "alert_acknowledged_at">[] | null) ?? []).filter(
@@ -42,7 +50,11 @@ export default async function AppLayout({
         isPlatformAdmin={profile.isPlatformAdmin}
         isAdmin={profile.role === "admin"}
         alertCount={alertCount}
+        memberships={profile.memberships}
+        activeOrganizationId={profile.organizationId}
+        switchOrganization={switchActiveOrganization}
       />
+      <InvitationsBanner invites={(invites as PendingInvite[] | null) ?? []} />
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
     </>
   );
