@@ -13,6 +13,7 @@ import {
   isInForce,
   isPastEndDate,
   type ContractDocument,
+  type ContractObligation,
   type ContractWithVendor,
   type VendorApplication,
 } from "@/lib/types";
@@ -41,6 +42,7 @@ export default async function DashboardPage({
   const [
     { count: vendorCount },
     { count: highRiskVendorCount },
+    { count: strategicHighRiskVendorCount },
     { data: vendorOptions },
     { data: contracts },
     { data: applications },
@@ -50,6 +52,12 @@ export default async function DashboardPage({
       .from("vendors")
       .select("*", { count: "exact", head: true })
       .in("risk_tier", ["high", "critical"])
+      .eq("status", "active"),
+    supabase
+      .from("vendors")
+      .select("*", { count: "exact", head: true })
+      .in("risk_tier", ["high", "critical"])
+      .eq("strategic_tier", "strategic")
       .eq("status", "active"),
     supabase.from("vendors").select("id, vendor_code, name").order("name"),
     contractsQuery,
@@ -77,6 +85,11 @@ export default async function DashboardPage({
     .not("expires_on", "is", null)
     .is("superseded_at", null);
 
+  const { data: openObligations } = await supabase
+    .from("contract_obligations")
+    .select("due_date, completed_at, contract_id")
+    .is("completed_at", null);
+
   const relevantDocuments = vendorId
     ? (expiringDocuments ?? []).filter((d) => allContracts.some((c) => c.id === d.contract_id))
     : expiringDocuments ?? [];
@@ -86,6 +99,13 @@ export default async function DashboardPage({
   const expiring = allContracts.filter(
     (c) => isInForce(c.status) && isExpiringSoon(c.end_date),
   );
+
+  const relevantObligations = vendorId
+    ? (openObligations ?? []).filter((o) => allContracts.some((c) => c.id === o.contract_id))
+    : openObligations ?? [];
+  const obligationsNeedingAttention = (
+    relevantObligations as Pick<ContractObligation, "due_date" | "completed_at">[]
+  ).filter((o) => isPastEndDate(o.due_date) || isExpiringSoon(o.due_date, 14));
 
   const allApplications = (applications as VendorApplication[] | null) ?? [];
   const pendingApplications = allApplications.filter(
@@ -210,7 +230,7 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <KpiTile
           label="Requests pending review"
           value={pendingApplications.length}
@@ -224,10 +244,22 @@ export default async function DashboardPage({
           warn={documentsNeedingAttention.length > 0}
         />
         <KpiTile
+          label="Obligations due"
+          value={obligationsNeedingAttention.length}
+          href="/alerts"
+          warn={obligationsNeedingAttention.length > 0}
+        />
+        <KpiTile
           label="High/critical risk vendors"
           value={highRiskVendorCount ?? 0}
           href="/vendors?risk=high"
           warn={(highRiskVendorCount ?? 0) > 0}
+        />
+        <KpiTile
+          label="Strategic vendors at high risk"
+          value={strategicHighRiskVendorCount ?? 0}
+          href="/vendors?risk=high&segment=strategic"
+          warn={(strategicHighRiskVendorCount ?? 0) > 0}
         />
         <Link
           href={applyHref}

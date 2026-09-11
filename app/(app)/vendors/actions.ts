@@ -18,6 +18,9 @@ function fromFormData(formData: FormData) {
     risk_tier: String(formData.get("risk_tier") ?? "").trim() || null,
     last_risk_review_at: String(formData.get("last_risk_review_at") ?? "").trim() || null,
     compliance_doc_expires_on: String(formData.get("compliance_doc_expires_on") ?? "").trim() || null,
+    strategic_tier: String(formData.get("strategic_tier") ?? "").trim() || null,
+    performance_rating: String(formData.get("performance_rating") ?? "").trim() || null,
+    last_performance_review_at: String(formData.get("last_performance_review_at") ?? "").trim() || null,
   };
 }
 

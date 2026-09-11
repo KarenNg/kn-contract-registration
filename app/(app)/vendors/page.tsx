@@ -2,17 +2,18 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { canMutate } from "@/lib/permissions";
-import { RiskTierBadge, VendorStatusBadge } from "@/components/StatusBadge";
-import { RISK_TIERS, type Vendor } from "@/lib/types";
+import { RiskTierBadge, StrategicTierBadge, VendorStatusBadge } from "@/components/StatusBadge";
+import { RISK_TIERS, STRATEGIC_TIERS, type Vendor } from "@/lib/types";
 import { code, errorBanner, input, primaryButton, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
 
-function buildHref(params: { q?: string; status?: string; risk?: string }): string {
+function buildHref(params: { q?: string; status?: string; risk?: string; segment?: string }): string {
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
   if (params.status) search.set("status", params.status);
   if (params.risk) search.set("risk", params.risk);
+  if (params.segment) search.set("segment", params.segment);
   const qs = search.toString();
   return qs ? `/vendors?${qs}` : "/vendors";
 }
@@ -20,9 +21,9 @@ function buildHref(params: { q?: string; status?: string; risk?: string }): stri
 export default async function VendorsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string; risk?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; risk?: string; segment?: string }>;
 }) {
-  const { q, status, risk } = await searchParams;
+  const { q, status, risk, segment } = await searchParams;
   const profile = await requireProfile();
   const canEdit = canMutate(profile.role);
   const supabase = await createClient();
@@ -30,6 +31,7 @@ export default async function VendorsPage({
   let query = supabase.from("vendors").select("*").order("created_at", { ascending: false });
   if (status) query = query.eq("status", status);
   if (risk) query = query.eq("risk_tier", risk);
+  if (segment) query = query.eq("strategic_tier", segment);
   if (q) query = query.or(`name.ilike.%${q}%,vendor_code.ilike.%${q}%,contact_name.ilike.%${q}%,contact_email.ilike.%${q}%`);
 
   const { data: vendors, error } = await query;
@@ -69,10 +71,11 @@ export default async function VendorsPage({
         />
         {status && <input type="hidden" name="status" value={status} />}
         {risk && <input type="hidden" name="risk" value={risk} />}
+        {segment && <input type="hidden" name="segment" value={segment} />}
         <button type="submit" className={primaryButton}>
           Search
         </button>
-        {(q || status || risk) && (
+        {(q || status || risk || segment) && (
           <Link href="/vendors" className="text-sm text-slate-500 hover:text-blue-700">
             Clear
           </Link>
@@ -80,17 +83,28 @@ export default async function VendorsPage({
       </form>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <FilterLink label="All" active={!status} href={buildHref({ q, risk })} />
-        <FilterLink label="Active" active={status === "active"} href={buildHref({ q, risk, status: "active" })} />
-        <FilterLink label="Inactive" active={status === "inactive"} href={buildHref({ q, risk, status: "inactive" })} />
+        <FilterLink label="All" active={!status} href={buildHref({ q, risk, segment })} />
+        <FilterLink label="Active" active={status === "active"} href={buildHref({ q, risk, segment, status: "active" })} />
+        <FilterLink label="Inactive" active={status === "inactive"} href={buildHref({ q, risk, segment, status: "inactive" })} />
         <span className="mx-1 text-slate-300">|</span>
-        <FilterLink label="Any risk" active={!risk} href={buildHref({ q, status })} />
+        <FilterLink label="Any risk" active={!risk} href={buildHref({ q, status, segment })} />
         {RISK_TIERS.map((tier) => (
           <FilterLink
             key={tier}
             label={tier}
             active={risk === tier}
-            href={buildHref({ q, status, risk: tier })}
+            href={buildHref({ q, status, segment, risk: tier })}
+            className="capitalize"
+          />
+        ))}
+        <span className="mx-1 text-slate-300">|</span>
+        <FilterLink label="Any segment" active={!segment} href={buildHref({ q, status, risk })} />
+        {STRATEGIC_TIERS.map((tier) => (
+          <FilterLink
+            key={tier}
+            label={tier}
+            active={segment === tier}
+            href={buildHref({ q, status, risk, segment: tier })}
             className="capitalize"
           />
         ))}
@@ -108,6 +122,7 @@ export default async function VendorsPage({
                 <th className={th}>Contact</th>
                 <th className={th}>Status</th>
                 <th className={th}>Risk</th>
+                <th className={th}>Segment</th>
                 <th className={th}>Contracts</th>
               </tr>
             </thead>
@@ -127,12 +142,15 @@ export default async function VendorsPage({
                   <td className="px-4 py-3">
                     <RiskTierBadge tier={vendor.risk_tier} />
                   </td>
+                  <td className="px-4 py-3">
+                    <StrategicTierBadge tier={vendor.strategic_tier} />
+                  </td>
                   <td className={`${td} tabular-nums`}>{counts.get(vendor.id) ?? 0}</td>
                 </tr>
               ))}
               {vendors?.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                     {q || status ? (
                       "No vendors match this search."
                     ) : canEdit ? (

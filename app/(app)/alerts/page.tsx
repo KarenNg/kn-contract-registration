@@ -8,13 +8,15 @@ import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { acknowledgeAlert } from "@/app/(app)/alerts/actions";
 import { acknowledgeDocumentExpiry } from "@/app/(app)/contracts/documents-actions";
 import { acknowledgeVendorComplianceExpiry } from "@/app/(app)/vendors/actions";
+import { completeObligation } from "@/app/(app)/contracts/obligations-actions";
 import { sendMyDigestNow } from "@/app/(app)/alerts/digest-actions";
-import { formatDate } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import {
   isExpiringSoon,
   isInForce,
   isPastEndDate,
   type ContractDocumentWithContract,
+  type ContractObligationWithContract,
   type ContractWithVendor,
   type Vendor,
 } from "@/lib/types";
@@ -34,24 +36,29 @@ export default async function AlertsPage({
 
   const canEdit = canMutate(profile.role);
 
-  const [{ data: contracts }, { data: documents }, { data: vendorsWithCompliance }] = await Promise.all([
-    supabase
-      .from("contracts")
-      .select("*, vendors(id, vendor_code, name)")
-      .in("status", ["active", "renewed", "expired"])
-      .order("end_date", { ascending: true, nullsFirst: false }),
-    supabase
-      .from("contract_documents")
-      .select("*, contracts(id, contract_code, title, vendor_id, owner_user_id, vendors(id, vendor_code, name))")
-      .not("expires_on", "is", null)
-      .is("superseded_at", null)
-      .order("expires_on", { ascending: true }),
-    supabase
-      .from("vendors")
-      .select("*")
-      .not("compliance_doc_expires_on", "is", null)
-      .order("compliance_doc_expires_on", { ascending: true }),
-  ]);
+  const [{ data: contracts }, { data: documents }, { data: vendorsWithCompliance }, { data: obligations }] =
+    await Promise.all([
+      supabase
+        .from("contracts")
+        .select("*, vendors(id, vendor_code, name)")
+        .in("status", ["active", "renewed", "expired"])
+        .order("end_date", { ascending: true, nullsFirst: false }),
+      supabase
+        .from("contract_documents")
+        .select("*, contracts(id, contract_code, title, vendor_id, owner_user_id, vendors(id, vendor_code, name))")
+        .not("expires_on", "is", null)
+        .is("superseded_at", null)
+        .order("expires_on", { ascending: true }),
+      supabase
+        .from("vendors")
+        .select("*")
+        .not("compliance_doc_expires_on", "is", null)
+        .order("compliance_doc_expires_on", { ascending: true }),
+      supabase
+        .from("contract_obligations")
+        .select("*, contracts(id, contract_code, title, currency, owner_user_id, vendors(id, vendor_code, name))")
+        .order("due_date", { ascending: true }),
+    ]);
 
   const allContracts = (contracts as ContractWithVendor[] | null) ?? [];
   const needsAttention = allContracts.filter(
@@ -76,6 +83,12 @@ export default async function AlertsPage({
   const acknowledgedVendors = allVendorsWithCompliance.filter(
     (v) => (isPastEndDate(v.compliance_doc_expires_on) || isExpiringSoon(v.compliance_doc_expires_on)) && v.compliance_doc_acknowledged_at,
   );
+
+  const allObligations = (obligations as ContractObligationWithContract[] | null) ?? [];
+  const obligationsNeedingAttention = allObligations.filter(
+    (o) => !o.completed_at && (isPastEndDate(o.due_date) || isExpiringSoon(o.due_date, 14)),
+  );
+  const completedObligations = allObligations.filter((o) => o.completed_at);
 
   const byOwner = new Map<string, ContractWithVendor[]>();
   for (const contract of needsAttention) {
@@ -398,6 +411,125 @@ export default async function AlertsPage({
                       {vendor.name}
                     </Link>
                     <span className="text-slate-500">{formatDate(vendor.compliance_doc_expires_on)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Obligations &amp; milestones
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Deliverables and payment milestones tied to a contract, separate from its renewal or termination date.
+          </p>
+        </div>
+
+        {obligationsNeedingAttention.length === 0 && (
+          <div className={`${panel} p-8 text-center text-slate-500`}>No obligations need attention.</div>
+        )}
+
+        {obligationsNeedingAttention.length > 0 && (
+          <div className={tableWrap}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={th}>Obligation</th>
+                    <th className={th}>Contract</th>
+                    <th className={th}>Vendor</th>
+                    <th className={th}>Due</th>
+                    <th className={th} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {obligationsNeedingAttention.map((obligation) => {
+                    const contract = obligation.contracts;
+                    const overdue = isPastEndDate(obligation.due_date);
+                    const complete = contract ? completeObligation.bind(null, contract.id, obligation.id) : null;
+                    return (
+                      <tr key={obligation.id} className={`${tr} ${overdue ? "bg-red-50" : "bg-orange-50"}`}>
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-slate-900">{obligation.title}</span>
+                          {obligation.amount != null && contract && (
+                            <span className="ml-2 text-slate-500">
+                              {formatCurrency(obligation.amount, contract.currency)}
+                            </span>
+                          )}
+                        </td>
+                        <td className={td}>
+                          {contract ? (
+                            <Link href={`/contracts/${contract.id}`} className="font-medium text-slate-900 hover:text-blue-700">
+                              {contract.title}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className={td}>
+                          {contract?.vendors ? (
+                            <Link href={`/vendors/${contract.vendors.id}`} className="hover:text-blue-700">
+                              {contract.vendors.name}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className={td}>
+                          <div className="flex items-center gap-2">
+                            {formatDate(obligation.due_date)}
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white ${
+                                overdue ? "bg-red-600" : "bg-orange-500"
+                              }`}
+                            >
+                              {overdue ? "⚠ Overdue" : "⚠ Due soon"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {contract && complete && (
+                            <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+                              <Link href={`/contracts/${contract.id}`} className={`${secondaryButton} text-center`}>
+                                View contract
+                              </Link>
+                              {canManageContract(profile.role, profile.userId, contract.owner_user_id) && (
+                                <form action={complete}>
+                                  <ConfirmSubmitButton
+                                    confirmMessage="Mark this obligation complete? It'll drop off this list."
+                                    className={`${primaryButton} w-full`}
+                                  >
+                                    Mark complete
+                                  </ConfirmSubmitButton>
+                                </form>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {completedObligations.length > 0 && (
+          <details className={`p-6 ${panel}`}>
+            <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Completed ({completedObligations.length})
+            </summary>
+            <div className={`${panelHeader} mt-4 rounded-md`}>
+              <ul className="divide-y divide-slate-200">
+                {completedObligations.map((obligation) => (
+                  <li key={obligation.id} className="flex flex-col gap-0.5 px-2 py-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                    <span className="font-medium text-slate-900">{obligation.title}</span>
+                    <span className="text-slate-500">{formatDate(obligation.due_date)}</span>
                   </li>
                 ))}
               </ul>

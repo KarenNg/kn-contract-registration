@@ -1,5 +1,7 @@
 export type VendorStatus = "active" | "inactive";
 export type RiskTier = "low" | "medium" | "high" | "critical";
+export type StrategicTier = "strategic" | "tactical" | "commodity";
+export type PerformanceRating = "excellent" | "good" | "fair" | "poor";
 
 export type ContractStatus =
   | "draft"
@@ -36,6 +38,9 @@ export interface Vendor {
   last_risk_review_at: string | null;
   compliance_doc_expires_on: string | null;
   compliance_doc_acknowledged_at: string | null;
+  strategic_tier: StrategicTier | null;
+  performance_rating: PerformanceRating | null;
+  last_performance_review_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -75,7 +80,9 @@ export type ContractEventType =
   | "document_superseded"
   | "status_changed"
   | "alert_acknowledged"
-  | "document_expiry_acknowledged";
+  | "document_expiry_acknowledged"
+  | "obligation_added"
+  | "obligation_completed";
 
 export interface ContractEvent {
   id: string;
@@ -130,6 +137,17 @@ export interface ContractDocument {
   expiry_acknowledged_at: string | null;
 }
 
+export interface ContractObligation {
+  id: string;
+  contract_id: string;
+  title: string;
+  due_date: string;
+  amount: number | null;
+  notes: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
 export interface ContractDocumentWithContract extends ContractDocument {
   contracts: {
     id: string;
@@ -141,7 +159,20 @@ export interface ContractDocumentWithContract extends ContractDocument {
   } | null;
 }
 
+export interface ContractObligationWithContract extends ContractObligation {
+  contracts: {
+    id: string;
+    contract_code: string;
+    title: string;
+    currency: string;
+    owner_user_id: string | null;
+    vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
+  } | null;
+}
+
 export const RISK_TIERS: RiskTier[] = ["low", "medium", "high", "critical"];
+export const STRATEGIC_TIERS: StrategicTier[] = ["strategic", "tactical", "commodity"];
+export const PERFORMANCE_RATINGS: PerformanceRating[] = ["excellent", "good", "fair", "poor"];
 
 export const CONTRACT_STATUSES: ContractStatus[] = [
   "draft",

@@ -28,15 +28,24 @@ interface AlertVendor {
   compliance_doc_expires_on: string | null;
 }
 
+interface AlertObligation {
+  id: string;
+  title: string;
+  due_date: string;
+  amount: number | null;
+  contracts: { id: string; title: string; currency: string; owner_user_id: string | null } | null;
+}
+
 export interface OrgAlerts {
   contracts: AlertContract[];
   documents: AlertDocument[];
   vendors: AlertVendor[];
+  obligations: AlertObligation[];
 }
 
-/** Everything in this org that's expiring/expired and hasn't been acknowledged. */
+/** Everything in this org that's expiring/expired/due and hasn't been acknowledged or completed. */
 export async function getOrgAlerts(supabase: SupabaseClient, organizationId: string): Promise<OrgAlerts> {
-  const [{ data: contracts }, { data: documents }, { data: vendors }] = await Promise.all([
+  const [{ data: contracts }, { data: documents }, { data: vendors }, { data: obligations }] = await Promise.all([
     supabase
       .from("contracts")
       .select("id, contract_code, title, end_date, status, value, currency, owner_user_id, vendors(name)")
@@ -56,6 +65,11 @@ export async function getOrgAlerts(supabase: SupabaseClient, organizationId: str
       .eq("organization_id", organizationId)
       .not("compliance_doc_expires_on", "is", null)
       .is("compliance_doc_acknowledged_at", null),
+    supabase
+      .from("contract_obligations")
+      .select("id, title, due_date, amount, contracts(id, title, currency, owner_user_id)")
+      .eq("organization_id", organizationId)
+      .is("completed_at", null),
   ]);
 
   const relevantContracts = ((contracts as unknown as AlertContract[]) ?? []).filter(
@@ -67,8 +81,16 @@ export async function getOrgAlerts(supabase: SupabaseClient, organizationId: str
   const relevantVendors = ((vendors as unknown as AlertVendor[]) ?? []).filter(
     (v) => isPastEndDate(v.compliance_doc_expires_on) || isExpiringSoon(v.compliance_doc_expires_on),
   );
+  const relevantObligations = ((obligations as unknown as AlertObligation[]) ?? []).filter(
+    (o) => isPastEndDate(o.due_date) || isExpiringSoon(o.due_date, 14),
+  );
 
-  return { contracts: relevantContracts, documents: relevantDocuments, vendors: relevantVendors };
+  return {
+    contracts: relevantContracts,
+    documents: relevantDocuments,
+    vendors: relevantVendors,
+    obligations: relevantObligations,
+  };
 }
 
 /** A contract_owner's digest only covers what's assigned to them — vendor compliance risk stays admin/management-only. */
@@ -77,15 +99,21 @@ export function scopeAlertsToOwner(alerts: OrgAlerts, userId: string): OrgAlerts
     contracts: alerts.contracts.filter((c) => c.owner_user_id === userId),
     documents: alerts.documents.filter((d) => d.contracts?.owner_user_id === userId),
     vendors: [],
+    obligations: alerts.obligations.filter((o) => o.contracts?.owner_user_id === userId),
   };
 }
 
 export function alertsAreEmpty(alerts: OrgAlerts): boolean {
-  return alerts.contracts.length === 0 && alerts.documents.length === 0 && alerts.vendors.length === 0;
+  return (
+    alerts.contracts.length === 0 &&
+    alerts.documents.length === 0 &&
+    alerts.vendors.length === 0 &&
+    alerts.obligations.length === 0
+  );
 }
 
 export function renderDigestEmail(organizationName: string, alerts: OrgAlerts): { subject: string; html: string } {
-  const total = alerts.contracts.length + alerts.documents.length + alerts.vendors.length;
+  const total = alerts.contracts.length + alerts.documents.length + alerts.vendors.length + alerts.obligations.length;
   const subject = `${organizationName}: ${total} item${total === 1 ? "" : "s"} need${total === 1 ? "s" : ""} attention`;
 
   const row = (label: string, detail: string) =>
@@ -113,6 +141,15 @@ export function renderDigestEmail(organizationName: string, alerts: OrgAlerts): 
     .map((v) => row(v.name, `Compliance document expires ${formatDate(v.compliance_doc_expires_on)}`))
     .join("");
 
+  const obligationsHtml = alerts.obligations
+    .map((o) =>
+      row(
+        `${o.title}${o.contracts ? ` (${o.contracts.title})` : ""}`,
+        `due ${formatDate(o.due_date)}${o.amount != null && o.contracts ? ` · ${formatCurrency(o.amount, o.contracts.currency)}` : ""}`,
+      ),
+    )
+    .join("");
+
   const section = (title: string, itemsHtml: string) =>
     itemsHtml
       ? `<h3 style="font-size:13px;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin:20px 0 4px">${title}</h3><ul style="list-style:none;padding:0;margin:0">${itemsHtml}</ul>`
@@ -120,10 +157,11 @@ export function renderDigestEmail(organizationName: string, alerts: OrgAlerts): 
 
   const html = `
     <div style="font-family:sans-serif;color:#0f172a;max-width:560px">
-      <p style="font-size:15px">${organizationName} has <strong>${total}</strong> item${total === 1 ? "" : "s"} expiring, expired, or otherwise needing a decision.</p>
+      <p style="font-size:15px">${organizationName} has <strong>${total}</strong> item${total === 1 ? "" : "s"} expiring, expired, due, or otherwise needing a decision.</p>
       ${section("Contracts", contractsHtml)}
       ${section("Compliance &amp; insurance documents", documentsHtml)}
       ${section("Vendor compliance documents", vendorsHtml)}
+      ${section("Obligations &amp; milestones", obligationsHtml)}
       <p style="margin-top:24px;font-size:13px;color:#94a3b8">Open ContractOps to renew, terminate, or acknowledge each one.</p>
     </div>
   `;
