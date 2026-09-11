@@ -13,21 +13,36 @@ const LINKS = [
   { href: "/alerts", label: "Alerts" },
 ];
 
+interface MembershipOption {
+  organizationId: string;
+  organizationName: string;
+  role: string;
+}
+
 export function Nav({
   organizationName,
   organizationSlug,
   email,
   isPlatformAdmin,
+  isAdmin,
   alertCount,
+  memberships,
+  activeOrganizationId,
+  switchOrganization,
 }: {
   organizationName: string;
   organizationSlug: string;
   email: string | null;
   isPlatformAdmin: boolean;
+  isAdmin: boolean;
   alertCount?: number;
+  memberships: MembershipOption[];
+  activeOrganizationId: string;
+  switchOrganization: (formData: FormData) => void;
 }) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const hasMultipleCompanies = memberships.length > 1;
 
   return (
     <header className="bg-[#232F3E]">
@@ -36,9 +51,26 @@ export function Nav({
           <Link href="/" className="shrink-0 text-base font-bold tracking-tight text-white">
             Contract<span className="text-[#EC7211]">Ops</span>
           </Link>
-          <span className="hidden truncate border-l border-white/20 pl-4 text-xs font-medium text-slate-300 sm:inline">
-            {organizationName}
-          </span>
+          {hasMultipleCompanies ? (
+            <form action={switchOrganization} className="hidden border-l border-white/20 pl-4 sm:block">
+              <select
+                name="organization_id"
+                defaultValue={activeOrganizationId}
+                onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                className="max-w-[160px] truncate rounded border border-white/20 bg-[#232F3E] px-2 py-1 text-xs font-medium text-slate-200"
+              >
+                {memberships.map((m) => (
+                  <option key={m.organizationId} value={m.organizationId}>
+                    {m.organizationName}
+                  </option>
+                ))}
+              </select>
+            </form>
+          ) : (
+            <span className="hidden truncate border-l border-white/20 pl-4 text-xs font-medium text-slate-300 sm:inline">
+              {organizationName}
+            </span>
+          )}
         </div>
 
         <nav className="hidden items-center gap-1 text-sm font-medium md:flex">
@@ -63,6 +95,18 @@ export function Nav({
               </Link>
             );
           })}
+          {isAdmin && (
+            <Link
+              href="/team"
+              className={`border-b-2 px-3 py-1.5 transition-colors ${
+                pathname.startsWith("/team")
+                  ? "border-[#EC7211] text-white"
+                  : "border-transparent text-slate-300 hover:border-white/30 hover:text-white"
+              }`}
+            >
+              Team
+            </Link>
+          )}
           {isPlatformAdmin && (
             <Link
               href="/admin"
@@ -121,7 +165,24 @@ export function Nav({
 
       {menuOpen && (
         <nav id="mobile-nav" className="border-t border-white/10 px-4 pb-4 pt-2 text-sm font-medium md:hidden">
-          <p className="truncate px-1 pb-2 text-xs font-medium text-slate-400">{organizationName}</p>
+          {hasMultipleCompanies ? (
+            <form action={switchOrganization} className="px-1 pb-2">
+              <select
+                name="organization_id"
+                defaultValue={activeOrganizationId}
+                onChange={(e) => e.currentTarget.form?.requestSubmit()}
+                className="w-full rounded border border-white/20 bg-[#232F3E] px-2 py-1.5 text-xs font-medium text-slate-200"
+              >
+                {memberships.map((m) => (
+                  <option key={m.organizationId} value={m.organizationId}>
+                    {m.organizationName}
+                  </option>
+                ))}
+              </select>
+            </form>
+          ) : (
+            <p className="truncate px-1 pb-2 text-xs font-medium text-slate-400">{organizationName}</p>
+          )}
           <div className="flex flex-col gap-0.5">
             {LINKS.map((link) => {
               const active = link.href === "/" ? pathname === "/" : pathname.startsWith(link.href);
@@ -143,6 +204,17 @@ export function Nav({
                 </Link>
               );
             })}
+            {isAdmin && (
+              <Link
+                href="/team"
+                onClick={() => setMenuOpen(false)}
+                className={`rounded px-3 py-2.5 ${
+                  pathname.startsWith("/team") ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                Team
+              </Link>
+            )}
             {isPlatformAdmin && (
               <Link
                 href="/admin"

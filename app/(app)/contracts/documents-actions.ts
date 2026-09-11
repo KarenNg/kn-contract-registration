@@ -2,9 +2,28 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile, type CurrentProfile } from "@/lib/auth";
 import { logContractEvent } from "@/lib/contracts";
+import { assertCanManageContract } from "@/lib/permissions";
 
 const BUCKET = "contract-documents";
+
+async function requireContractAccess(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  profile: CurrentProfile,
+  contractId: string,
+) {
+  const { data: contract, error } = await supabase
+    .from("contracts")
+    .select("owner_user_id")
+    .eq("id", contractId)
+    .single();
+
+  if (error || !contract) {
+    throw new Error(error?.message ?? "Contract not found");
+  }
+  assertCanManageContract(profile.role, profile.userId, contract.owner_user_id);
+}
 
 async function storeFile(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -12,6 +31,7 @@ async function storeFile(
   file: File,
   documentType: string,
   notes: string | null,
+  expiresOn: string | null,
 ) {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
   const path = `${contractId}/${Date.now()}-${safeName}`;
@@ -34,6 +54,7 @@ async function storeFile(
       mime_type: file.type || null,
       document_type: documentType,
       notes,
+      expires_on: expiresOn,
     })
     .select("id")
     .single();
@@ -50,19 +71,22 @@ export async function uploadContractDocument(contractId: string, formData: FormD
   const file = formData.get("file") as File | null;
   const documentType = String(formData.get("document_type") ?? "other");
   const notes = String(formData.get("notes") ?? "").trim() || null;
+  const expiresOn = String(formData.get("expires_on") ?? "").trim() || null;
 
   if (!file || file.size === 0) {
     throw new Error("Choose a file to upload");
   }
 
+  const profile = await requireProfile();
   const supabase = await createClient();
-  await storeFile(supabase, contractId, file, documentType, notes);
+  await requireContractAccess(supabase, profile, contractId);
+  await storeFile(supabase, contractId, file, documentType, notes, expiresOn);
   await logContractEvent(
     supabase,
     contractId,
     "document_uploaded",
     `Uploaded ${file.name}`,
-    `Document type: ${documentType.replace(/_/g, " ")}`,
+    `Document type: ${documentType.replace(/_/g, " ")}${expiresOn ? ` · Expires ${expiresOn}` : ""}`,
   );
 
   revalidatePath(`/contracts/${contractId}`);
@@ -84,11 +108,13 @@ export async function replaceContractDocument(
     throw new Error("Choose a replacement file to upload");
   }
 
+  const profile = await requireProfile();
   const supabase = await createClient();
+  await requireContractAccess(supabase, profile, contractId);
 
   const { data: oldDoc, error: fetchError } = await supabase
     .from("contract_documents")
-    .select("document_type, file_name")
+    .select("document_type, file_name, expires_on")
     .eq("id", oldDocumentId)
     .single();
 
@@ -96,7 +122,15 @@ export async function replaceContractDocument(
     throw new Error(fetchError?.message ?? "Original document not found");
   }
 
-  const newDocId = await storeFile(supabase, contractId, file, oldDoc.document_type, null);
+  const expiresOnOverride = String(formData.get("expires_on") ?? "").trim() || null;
+  const newDocId = await storeFile(
+    supabase,
+    contractId,
+    file,
+    oldDoc.document_type,
+    null,
+    expiresOnOverride ?? oldDoc.expires_on,
+  );
 
   const { error: supersedeError } = await supabase
     .from("contract_documents")
@@ -122,7 +156,9 @@ export async function deleteContractDocument(
   documentId: string,
   filePath: string,
 ) {
+  const profile = await requireProfile();
   const supabase = await createClient();
+  await requireContractAccess(supabase, profile, contractId);
 
   await supabase.storage.from(BUCKET).remove([filePath]);
 
@@ -135,5 +171,34 @@ export async function deleteContractDocument(
     throw new Error(error.message);
   }
 
+  revalidatePath(`/contracts/${contractId}`);
+}
+
+/** Dismisses a document-expiry alert (e.g. an insurance certificate) until the situation changes. */
+export async function acknowledgeDocumentExpiry(contractId: string, documentId: string) {
+  const profile = await requireProfile();
+  const supabase = await createClient();
+  await requireContractAccess(supabase, profile, contractId);
+
+  const { data: doc, error } = await supabase
+    .from("contract_documents")
+    .update({ expiry_acknowledged_at: new Date().toISOString() })
+    .eq("id", documentId)
+    .select("file_name")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  await logContractEvent(
+    supabase,
+    contractId,
+    "document_expiry_acknowledged",
+    `Expiry alert acknowledged for ${doc?.file_name ?? "document"}`,
+  );
+
+  revalidatePath("/alerts");
+  revalidatePath("/");
   revalidatePath(`/contracts/${contractId}`);
 }

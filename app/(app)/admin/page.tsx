@@ -14,11 +14,10 @@ interface OrgRow {
 }
 
 interface MemberRow {
-  id: string;
-  email: string | null;
-  full_name: string | null;
+  user_id: string;
   role: string;
   organization_id: string;
+  profiles: { email: string | null; full_name: string | null } | null;
 }
 
 interface StatsRow {
@@ -38,7 +37,7 @@ export default async function PlatformAdminPage() {
 
   const [{ data: organizations }, { data: members }, { data: stats }] = await Promise.all([
     supabase.from("organizations").select("id, name, slug, created_at").order("created_at"),
-    supabase.from("profiles").select("id, email, full_name, role, organization_id"),
+    supabase.from("memberships").select("user_id, role, organization_id, profiles(email, full_name)"),
     supabase.rpc("platform_admin_org_stats"),
   ]);
 
@@ -97,10 +96,10 @@ export default async function PlatformAdminPage() {
                       ) : (
                         <ul className="space-y-0.5">
                           {orgMembers.map((member) => (
-                            <li key={member.id} className="text-slate-700">
-                              {member.email ?? "—"}
-                              {member.full_name && (
-                                <span className="text-slate-500"> ({member.full_name})</span>
+                            <li key={member.user_id} className="text-slate-700">
+                              {member.profiles?.email ?? "—"}
+                              {member.profiles?.full_name && (
+                                <span className="text-slate-500"> ({member.profiles.full_name})</span>
                               )}
                             </li>
                           ))}

@@ -48,6 +48,7 @@ export interface Contract {
   currency: string;
   status: ContractStatus;
   owner_name: string | null;
+  owner_user_id: string | null;
   auto_renew: boolean;
   renewal_terms: string | null;
   notes: string | null;
@@ -68,7 +69,8 @@ export type ContractEventType =
   | "document_uploaded"
   | "document_superseded"
   | "status_changed"
-  | "alert_acknowledged";
+  | "alert_acknowledged"
+  | "document_expiry_acknowledged";
 
 export interface ContractEvent {
   id: string;
@@ -119,6 +121,19 @@ export interface ContractDocument {
   uploaded_at: string;
   superseded_at: string | null;
   superseded_by_id: string | null;
+  expires_on: string | null;
+  expiry_acknowledged_at: string | null;
+}
+
+export interface ContractDocumentWithContract extends ContractDocument {
+  contracts: {
+    id: string;
+    contract_code: string;
+    title: string;
+    vendor_id: string;
+    owner_user_id: string | null;
+    vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
+  } | null;
 }
 
 export const CONTRACT_STATUSES: ContractStatus[] = [

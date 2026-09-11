@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
+import { canMutate } from "@/lib/permissions";
 import { VendorStatusBadge } from "@/components/StatusBadge";
 import type { Vendor } from "@/lib/types";
 import { code, errorBanner, input, primaryButton, tableWrap, td, th, tr } from "@/components/theme";
@@ -12,6 +14,8 @@ export default async function VendorsPage({
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const { q, status } = await searchParams;
+  const profile = await requireProfile();
+  const canEdit = canMutate(profile.role);
   const supabase = await createClient();
 
   let query = supabase.from("vendors").select("*").order("created_at", { ascending: false });
@@ -38,9 +42,11 @@ export default async function VendorsPage({
             All registered vendors and their contract counts.
           </p>
         </div>
-        <Link href="/vendors/new" className={`${primaryButton} self-start`}>
-          + New vendor
-        </Link>
+        {canEdit && (
+          <Link href="/vendors/new" className={`${primaryButton} self-start`}>
+            + New vendor
+          </Link>
+        )}
       </div>
 
       <form className="flex flex-wrap items-center gap-3" action="/vendors">
@@ -111,7 +117,7 @@ export default async function VendorsPage({
                   <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                     {q || status ? (
                       "No vendors match this search."
-                    ) : (
+                    ) : canEdit ? (
                       <>
                         No vendors yet.{" "}
                         <Link href="/vendors/new" className="text-blue-600 hover:underline">
@@ -119,6 +125,8 @@ export default async function VendorsPage({
                         </Link>
                         .
                       </>
+                    ) : (
+                      "No vendors yet."
                     )}
                   </td>
                 </tr>

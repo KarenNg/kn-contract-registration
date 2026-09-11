@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
 import { sweepExpiredContracts } from "@/lib/contracts";
+import { canManageContract } from "@/lib/permissions";
+import { orgMembersToOptions } from "@/lib/members";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { ContractStatusBadge } from "@/components/StatusBadge";
+import { OwnerField } from "@/components/OwnerField";
 import { deleteContract, updateContract } from "@/app/(app)/contracts/actions";
 import { renewContract, recordAmendment, terminateContract } from "@/app/(app)/contracts/lifecycle-actions";
 import {
+  acknowledgeDocumentExpiry,
   deleteContractDocument,
   replaceContractDocument,
   uploadContractDocument,
@@ -18,6 +23,7 @@ import {
   DOCUMENT_TYPES,
   isExpiringSoon,
   isInForce,
+  isPastEndDate,
   type Contract,
   type ContractDocument,
   type ContractEvent,
@@ -44,6 +50,7 @@ export default async function ContractDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const profile = await requireProfile();
   const supabase = await createClient();
   await sweepExpiredContracts(supabase);
 
@@ -57,10 +64,10 @@ export default async function ContractDetailPage({
     notFound();
   }
 
-  const { data: vendors } = await supabase
-    .from("vendors")
-    .select("id, name, vendor_code")
-    .order("name");
+  const [{ data: vendors }, { data: members }] = await Promise.all([
+    supabase.from("vendors").select("id, name, vendor_code").order("name"),
+    supabase.from("profiles").select("id, full_name, email").order("full_name"),
+  ]);
 
   const { data: documents } = await supabase
     .from("contract_documents")
@@ -91,6 +98,8 @@ export default async function ContractDetailPage({
 
   const inForce = isInForce(typedContract.status);
   const expiring = inForce && isExpiringSoon(typedContract.end_date);
+  const canManage = canManageContract(profile.role, profile.userId, typedContract.owner_user_id);
+  const memberOptions = orgMembersToOptions(members);
 
   return (
     <div className="space-y-8">
@@ -154,66 +163,77 @@ export default async function ContractDetailPage({
         </div>
       )}
 
-      <div className={panel}>
-        <div className={panelHeader}>
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Lifecycle actions</h2>
+      {!canManage && (
+        <div className={`${panel} border-slate-200 bg-slate-50 p-4 text-sm text-slate-600`}>
+          {profile.role === "management"
+            ? "Your role (Management) is read-only — you can view this contract but not change it."
+            : "This contract is assigned to another owner, so it's shown read-only. Ask an admin to reassign it to you first."}
         </div>
-        <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          <div className="p-5">
-            <p className="text-sm font-semibold text-slate-900">Renew</p>
-            <p className="mt-0.5 text-xs text-slate-500">Extend the term and put the contract back in force.</p>
-            {inForce ? (
-              <form action={renewContractWithId} className="mt-3 space-y-2">
-                <input type="date" name="new_end_date" required className={`${input} mt-0`} />
+      )}
+
+      {canManage && (
+        <div className={panel}>
+          <div className={panelHeader}>
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Lifecycle actions</h2>
+          </div>
+          <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="p-5">
+              <p className="text-sm font-semibold text-slate-900">Renew</p>
+              <p className="mt-0.5 text-xs text-slate-500">Extend the term and put the contract back in force.</p>
+              {inForce ? (
+                <form action={renewContractWithId} className="mt-3 space-y-2">
+                  <input type="date" name="new_end_date" required className={`${input} mt-0`} />
+                  <input type="number" step="0.01" name="new_value" placeholder="New value (optional)" className={`${input} mt-0`} />
+                  <button type="submit" className={`${primaryButton} w-full`}>
+                    Renew contract
+                  </button>
+                </form>
+              ) : (
+                <p className="mt-3 text-xs text-slate-400">Not available — contract is {typedContract.status}.</p>
+              )}
+            </div>
+
+            <div className="p-5">
+              <p className="text-sm font-semibold text-slate-900">Record amendment</p>
+              <p className="mt-0.5 text-xs text-slate-500">Log a change to terms, value, or end date.</p>
+              <form action={recordAmendmentWithId} className="mt-3 space-y-2">
+                <textarea name="amendment_summary" required rows={2} placeholder="What changed?" className={`${input} mt-0`} />
                 <input type="number" step="0.01" name="new_value" placeholder="New value (optional)" className={`${input} mt-0`} />
-                <button type="submit" className={`${primaryButton} w-full`}>
-                  Renew contract
+                <input type="date" name="new_end_date" placeholder="New end date (optional)" className={`${input} mt-0`} />
+                <button type="submit" className={`${secondaryButton} w-full`}>
+                  Save amendment
                 </button>
               </form>
-            ) : (
-              <p className="mt-3 text-xs text-slate-400">Not available — contract is {typedContract.status}.</p>
-            )}
-          </div>
+            </div>
 
-          <div className="p-5">
-            <p className="text-sm font-semibold text-slate-900">Record amendment</p>
-            <p className="mt-0.5 text-xs text-slate-500">Log a change to terms, value, or end date.</p>
-            <form action={recordAmendmentWithId} className="mt-3 space-y-2">
-              <textarea name="amendment_summary" required rows={2} placeholder="What changed?" className={`${input} mt-0`} />
-              <input type="number" step="0.01" name="new_value" placeholder="New value (optional)" className={`${input} mt-0`} />
-              <input type="date" name="new_end_date" placeholder="New end date (optional)" className={`${input} mt-0`} />
-              <button type="submit" className={`${secondaryButton} w-full`}>
-                Save amendment
-              </button>
-            </form>
-          </div>
-
-          <div className="p-5">
-            <p className="text-sm font-semibold text-slate-900">Terminate</p>
-            <p className="mt-0.5 text-xs text-slate-500">Close the contract out for cause.</p>
-            {typedContract.status !== "terminated" ? (
-              <form action={terminateContractWithId} className="mt-3 space-y-2">
-                <textarea name="termination_reason" required rows={2} placeholder="Reason (required)" className={`${input} mt-0`} />
-                <input name="terminated_by" placeholder="Authorized by" className={`${input} mt-0`} />
-                <ConfirmSubmitButton
-                  confirmMessage="Terminate this contract? This cannot be undone."
-                  className="w-full rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
-                >
-                  Terminate contract
-                </ConfirmSubmitButton>
-              </form>
-            ) : (
-              <p className="mt-3 text-xs text-slate-400">Already terminated.</p>
-            )}
+            <div className="p-5">
+              <p className="text-sm font-semibold text-slate-900">Terminate</p>
+              <p className="mt-0.5 text-xs text-slate-500">Close the contract out for cause.</p>
+              {typedContract.status !== "terminated" ? (
+                <form action={terminateContractWithId} className="mt-3 space-y-2">
+                  <textarea name="termination_reason" required rows={2} placeholder="Reason (required)" className={`${input} mt-0`} />
+                  <input name="terminated_by" placeholder="Authorized by" className={`${input} mt-0`} />
+                  <ConfirmSubmitButton
+                    confirmMessage="Terminate this contract? This cannot be undone."
+                    className="w-full rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100"
+                  >
+                    Terminate contract
+                  </ConfirmSubmitButton>
+                </form>
+              ) : (
+                <p className="mt-3 text-xs text-slate-400">Already terminated.</p>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <div className={panel}>
         <div className={panelHeader}>
           <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Contract details</h2>
         </div>
 
+        {canManage ? (
         <form action={updateContractWithId} className="space-y-4 px-6 py-6">
           <div className={row}>
             <label className={label}>Vendor</label>
@@ -270,10 +290,13 @@ export default async function ContractDetailPage({
             </div>
           </div>
 
-          <div className={row}>
-            <label className={label}>Contract owner</label>
-            <input name="owner_name" defaultValue={typedContract.owner_name ?? ""} className={input} />
-          </div>
+          <OwnerField
+            members={memberOptions}
+            currentRole={profile.role}
+            currentUserId={profile.userId}
+            currentOwnerUserId={typedContract.owner_user_id}
+            legacyOwnerName={typedContract.owner_name}
+          />
 
           <div className={row}>
             <label className={label}>Auto-renews</label>
@@ -312,6 +335,33 @@ export default async function ContractDetailPage({
             </button>
           </div>
         </form>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 p-6 sm:grid-cols-2">
+            <InfoBox label="Contract type" value={typedContract.contract_type ?? "—"} />
+            <InfoBox label="Start date" value={formatDate(typedContract.start_date)} />
+            <InfoBox
+              label="Value"
+              value={`${typedContract.value ?? "—"} ${typedContract.currency}`}
+            />
+            <InfoBox label="Contract owner" value={typedContract.owner_name ?? "Unassigned"} />
+            <InfoBox label="Auto-renews" value={typedContract.auto_renew ? "Yes" : "No"} />
+            {typedContract.description && (
+              <div className="sm:col-span-2">
+                <InfoBox label="Description" value={typedContract.description} />
+              </div>
+            )}
+            {typedContract.renewal_terms && (
+              <div className="sm:col-span-2">
+                <InfoBox label="Renewal terms" value={typedContract.renewal_terms} />
+              </div>
+            )}
+            {typedContract.notes && (
+              <div className="sm:col-span-2">
+                <InfoBox label="Notes" value={typedContract.notes} />
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={panel}>
@@ -329,6 +379,7 @@ export default async function ContractDetailPage({
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Type</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Size</th>
                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Uploaded</th>
+                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Expires</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -336,6 +387,9 @@ export default async function ContractDetailPage({
               {typedDocuments.map((doc) => {
                 const deleteDoc = deleteContractDocument.bind(null, id, doc.id, doc.file_path);
                 const replaceDoc = replaceContractDocument.bind(null, id, doc.id);
+                const acknowledgeExpiry = acknowledgeDocumentExpiry.bind(null, id, doc.id);
+                const expired = isPastEndDate(doc.expires_on);
+                const expiringSoon = !expired && isExpiringSoon(doc.expires_on);
                 return (
                   <tr key={doc.id} className="border-t border-slate-200 hover:bg-slate-50">
                     <td className="px-4 py-3">
@@ -353,32 +407,62 @@ export default async function ContractDetailPage({
                     </td>
                     <td className="px-4 py-3 text-slate-500">{formatBytes(doc.file_size)}</td>
                     <td className="px-4 py-3 text-slate-500">{formatDateTime(doc.uploaded_at)}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-                        <details className="text-left">
-                          <summary className="cursor-pointer px-1 py-1 text-xs font-medium text-blue-600 hover:underline">
-                            Replace
-                          </summary>
-                          <form action={replaceDoc} className="mt-2 flex items-center gap-2">
-                            <input type="file" name="file" required className="text-xs text-slate-700" />
-                            <button type="submit" className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700">
-                              Upload
-                            </button>
-                          </form>
-                        </details>
-                        <form action={deleteDoc}>
-                          <ConfirmSubmitButton confirmMessage="Delete this document?" className="px-1 py-1 text-xs font-medium text-red-600 hover:underline">
-                            Delete
+                    <td className="px-4 py-3 text-slate-500">
+                      <div className="flex items-center gap-2">
+                        {formatDate(doc.expires_on)}
+                        {(expired || expiringSoon) && !doc.expiry_acknowledged_at && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white ${
+                              expired ? "bg-red-600" : "bg-orange-500"
+                            }`}
+                          >
+                            {expired ? "⚠ Expired" : "⚠ Expiring soon"}
+                          </span>
+                        )}
+                      </div>
+                      {canManage && (expired || expiringSoon) && !doc.expiry_acknowledged_at && (
+                        <form action={acknowledgeExpiry} className="mt-1">
+                          <ConfirmSubmitButton
+                            confirmMessage="Acknowledge this document's expiry alert?"
+                            className="text-xs font-medium text-blue-600 hover:underline"
+                          >
+                            Acknowledge
                           </ConfirmSubmitButton>
                         </form>
-                      </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canManage && (
+                        <div className="flex flex-col items-end gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+                          <details className="text-left">
+                            <summary className="cursor-pointer px-1 py-1 text-xs font-medium text-blue-600 hover:underline">
+                              Replace
+                            </summary>
+                            <form action={replaceDoc} className="mt-2 flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+                              <input type="file" name="file" required className="text-xs text-slate-700" />
+                              <label className="flex items-center gap-1 text-xs text-slate-500">
+                                Expires
+                                <input type="date" name="expires_on" defaultValue={doc.expires_on ?? ""} className="rounded border border-slate-300 px-1 py-0.5 text-xs" />
+                              </label>
+                              <button type="submit" className="rounded-md bg-blue-600 px-2 py-1 text-xs font-semibold text-white hover:bg-blue-700">
+                                Upload
+                              </button>
+                            </form>
+                          </details>
+                          <form action={deleteDoc}>
+                            <ConfirmSubmitButton confirmMessage="Delete this document?" className="px-1 py-1 text-xs font-medium text-red-600 hover:underline">
+                              Delete
+                            </ConfirmSubmitButton>
+                          </form>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
               })}
               {typedDocuments.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
                     No documents attached yet.
                   </td>
                 </tr>
@@ -387,32 +471,41 @@ export default async function ContractDetailPage({
           </table>
         </div>
 
-        <form
-          action={uploadDocumentWithId}
-          className="flex flex-wrap items-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4"
-        >
-          <div>
-            <label className="block text-xs font-medium text-slate-500">File</label>
-            <input type="file" name="file" required className="mt-1 text-sm text-slate-800" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-500">Document type</label>
-            <select name="document_type" className={`${input} mt-1`}>
-              {DOCUMENT_TYPES.map((type) => (
-                <option key={type} value={type} className="capitalize">
-                  {type.replace(/_/g, " ")}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="min-w-[160px] flex-1">
-            <label className="block text-xs font-medium text-slate-500">Notes</label>
-            <input name="notes" className={`${input} mt-1`} />
-          </div>
-          <button type="submit" className={primaryButton}>
-            Add document
-          </button>
-        </form>
+        {canManage && (
+          <form
+            action={uploadDocumentWithId}
+            className="flex flex-wrap items-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4"
+          >
+            <div>
+              <label className="block text-xs font-medium text-slate-500">File</label>
+              <input type="file" name="file" required className="mt-1 text-sm text-slate-800" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500">Document type</label>
+              <select name="document_type" className={`${input} mt-1`}>
+                {DOCUMENT_TYPES.map((type) => (
+                  <option key={type} value={type} className="capitalize">
+                    {type.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-500">Expires on</label>
+              <input type="date" name="expires_on" className={`${input} mt-1`} />
+              <p className="mt-0.5 max-w-[160px] text-[11px] text-slate-400">
+                For insurance certificates and other compliance docs — tracked separately from the contract end date.
+              </p>
+            </div>
+            <div className="min-w-[160px] flex-1">
+              <label className="block text-xs font-medium text-slate-500">Notes</label>
+              <input name="notes" className={`${input} mt-1`} />
+            </div>
+            <button type="submit" className={primaryButton}>
+              Add document
+            </button>
+          </form>
+        )}
 
         {supersededDocuments.length > 0 && (
           <details className="border-t border-slate-200 px-6 py-4">
@@ -467,11 +560,13 @@ export default async function ContractDetailPage({
         </ul>
       </div>
 
-      <form action={deleteContractWithId}>
-        <ConfirmSubmitButton confirmMessage="Delete this contract and all of its documents? This cannot be undone." className={dangerLink}>
-          Delete contract
-        </ConfirmSubmitButton>
-      </form>
+      {canManage && (
+        <form action={deleteContractWithId}>
+          <ConfirmSubmitButton confirmMessage="Delete this contract and all of its documents? This cannot be undone." className={dangerLink}>
+            Delete contract
+          </ConfirmSubmitButton>
+        </form>
+      )}
     </div>
   );
 }

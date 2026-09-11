@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
+import { assertCanMutate } from "@/lib/permissions";
 
 function fromFormData(formData: FormData) {
   return {
@@ -17,6 +19,9 @@ function fromFormData(formData: FormData) {
 }
 
 export async function createVendor(formData: FormData) {
+  const profile = await requireProfile();
+  assertCanMutate(profile.role);
+
   const values = fromFormData(formData);
   if (!values.name) {
     throw new Error("Vendor name is required");
@@ -39,6 +44,9 @@ export async function createVendor(formData: FormData) {
 }
 
 export async function updateVendor(vendorId: string, formData: FormData) {
+  const profile = await requireProfile();
+  assertCanMutate(profile.role);
+
   const values = fromFormData(formData);
   if (!values.name) {
     throw new Error("Vendor name is required");
@@ -60,6 +68,9 @@ export async function updateVendor(vendorId: string, formData: FormData) {
 }
 
 export async function deleteVendor(vendorId: string) {
+  const profile = await requireProfile();
+  assertCanMutate(profile.role);
+
   const supabase = await createClient();
   const { error } = await supabase.from("vendors").delete().eq("id", vendorId);
 

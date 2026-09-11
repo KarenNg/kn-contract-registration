@@ -1,6 +1,10 @@
+import { notFound } from "next/navigation";
 import { ContractForm } from "@/components/ContractForm";
 import { createContract } from "@/app/(app)/contracts/actions";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
+import { canMutate } from "@/lib/permissions";
+import { orgMembersToOptions } from "@/lib/members";
 import { panel } from "@/components/theme";
 
 export default async function NewContractPage({
@@ -9,11 +13,15 @@ export default async function NewContractPage({
   searchParams: Promise<{ vendor_id?: string }>;
 }) {
   const { vendor_id } = await searchParams;
+  const profile = await requireProfile();
+  if (!canMutate(profile.role)) {
+    notFound();
+  }
   const supabase = await createClient();
-  const { data: vendors } = await supabase
-    .from("vendors")
-    .select("id, name, vendor_code")
-    .order("name");
+  const [{ data: vendors }, { data: members }] = await Promise.all([
+    supabase.from("vendors").select("id, name, vendor_code").order("name"),
+    supabase.from("profiles").select("id, full_name, email").order("full_name"),
+  ]);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -24,7 +32,14 @@ export default async function NewContractPage({
         </p>
       </div>
       <div className={`p-6 ${panel}`}>
-        <ContractForm vendors={vendors ?? []} defaultVendorId={vendor_id} action={createContract} />
+        <ContractForm
+          vendors={vendors ?? []}
+          defaultVendorId={vendor_id}
+          members={orgMembersToOptions(members)}
+          currentRole={profile.role}
+          currentUserId={profile.userId}
+          action={createContract}
+        />
       </div>
     </div>
   );

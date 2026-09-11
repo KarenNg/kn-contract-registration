@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
 import { logContractEvent } from "@/lib/contracts";
+import { assertCanManageContract } from "@/lib/permissions";
 import { formatCurrency, formatDate } from "@/lib/format";
 
 function afterSave(contractId: string, vendorId?: string | null) {
@@ -23,17 +25,19 @@ export async function renewContract(contractId: string, formData: FormData) {
     throw new Error("A new end date is required to renew a contract");
   }
 
+  const profile = await requireProfile();
   const supabase = await createClient();
 
   const { data: current, error: fetchError } = await supabase
     .from("contracts")
-    .select("end_date, value, vendor_id")
+    .select("end_date, value, vendor_id, owner_user_id")
     .eq("id", contractId)
     .single();
 
   if (fetchError || !current) {
     throw new Error(fetchError?.message ?? "Contract not found");
   }
+  assertCanManageContract(profile.role, profile.userId, current.owner_user_id);
 
   const updates: Record<string, unknown> = {
     status: "renewed",
@@ -69,17 +73,19 @@ export async function recordAmendment(contractId: string, formData: FormData) {
     throw new Error("Describe what changed in this amendment");
   }
 
+  const profile = await requireProfile();
   const supabase = await createClient();
 
   const { data: current, error: fetchError } = await supabase
     .from("contracts")
-    .select("end_date, value, vendor_id")
+    .select("end_date, value, vendor_id, owner_user_id")
     .eq("id", contractId)
     .single();
 
   if (fetchError || !current) {
     throw new Error(fetchError?.message ?? "Contract not found");
   }
+  assertCanManageContract(profile.role, profile.userId, current.owner_user_id);
 
   const updates: Record<string, unknown> = {};
   const detailParts: string[] = [];
@@ -113,17 +119,19 @@ export async function terminateContract(contractId: string, formData: FormData) 
     throw new Error("A termination reason is required");
   }
 
+  const profile = await requireProfile();
   const supabase = await createClient();
 
   const { data: current, error: fetchError } = await supabase
     .from("contracts")
-    .select("vendor_id")
+    .select("vendor_id, owner_user_id")
     .eq("id", contractId)
     .single();
 
   if (fetchError || !current) {
     throw new Error(fetchError?.message ?? "Contract not found");
   }
+  assertCanManageContract(profile.role, profile.userId, current.owner_user_id);
 
   const { error } = await supabase
     .from("contracts")

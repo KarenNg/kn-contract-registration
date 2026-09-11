@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
 import { sweepExpiredContracts } from "@/lib/contracts";
+import { canMutate } from "@/lib/permissions";
 import { ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { isExpiringSoon, isInForce, type ContractWithVendor } from "@/lib/types";
@@ -14,6 +16,8 @@ export default async function ContractsPage({
   searchParams: Promise<{ status?: string; vendor_id?: string; q?: string; view?: string }>;
 }) {
   const { status, vendor_id, q, view } = await searchParams;
+  const profile = await requireProfile();
+  const canEdit = canMutate(profile.role);
   const supabase = await createClient();
   await sweepExpiredContracts(supabase);
 
@@ -49,9 +53,11 @@ export default async function ContractsPage({
           >
             Export CSV
           </a>
-          <Link href="/contracts/new" className={primaryButton}>
-            + New contract
-          </Link>
+          {canEdit && (
+            <Link href="/contracts/new" className={primaryButton}>
+              + New contract
+            </Link>
+          )}
         </div>
       </div>
 

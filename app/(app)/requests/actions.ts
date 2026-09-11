@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
+import { assertCanMutate } from "@/lib/permissions";
 
 export async function submitApplication(organizationSlug: string, formData: FormData) {
   const rawValue = String(formData.get("requested_value") ?? "").trim();
@@ -52,6 +54,9 @@ export async function submitApplication(organizationSlug: string, formData: Form
 }
 
 export async function markUnderReview(applicationId: string) {
+  const profile = await requireProfile();
+  assertCanMutate(profile.role);
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("vendor_applications")
@@ -68,7 +73,10 @@ export async function markUnderReview(applicationId: string) {
 }
 
 export async function approveApplication(applicationId: string, formData: FormData) {
-  const reviewerName = String(formData.get("reviewer_name") ?? "").trim() || null;
+  const profile = await requireProfile();
+  assertCanMutate(profile.role);
+
+  const reviewerName = String(formData.get("reviewer_name") ?? "").trim() || profile.fullName || profile.email;
   const reviewNotes = String(formData.get("review_notes") ?? "").trim() || null;
 
   const supabase = await createClient();
@@ -111,6 +119,7 @@ export async function approveApplication(applicationId: string, formData: FormDa
       start_date: application.requested_start_date,
       value: application.requested_value,
       status: "draft",
+      owner_user_id: profile.userId,
       owner_name: reviewerName,
     })
     .select("id")
@@ -145,7 +154,10 @@ export async function approveApplication(applicationId: string, formData: FormDa
 }
 
 export async function rejectApplication(applicationId: string, formData: FormData) {
-  const reviewerName = String(formData.get("reviewer_name") ?? "").trim() || null;
+  const profile = await requireProfile();
+  assertCanMutate(profile.role);
+
+  const reviewerName = String(formData.get("reviewer_name") ?? "").trim() || profile.fullName || profile.email;
   const reviewNotes = String(formData.get("review_notes") ?? "").trim() || null;
 
   const supabase = await createClient();
@@ -170,6 +182,9 @@ export async function rejectApplication(applicationId: string, formData: FormDat
 }
 
 export async function deleteApplication(applicationId: string) {
+  const profile = await requireProfile();
+  assertCanMutate(profile.role);
+
   const supabase = await createClient();
   const { error } = await supabase.from("vendor_applications").delete().eq("id", applicationId);
 
