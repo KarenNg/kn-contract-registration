@@ -8,6 +8,7 @@ import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { acknowledgeAlert } from "@/app/(app)/alerts/actions";
 import { acknowledgeDocumentExpiry } from "@/app/(app)/contracts/documents-actions";
 import { acknowledgeVendorComplianceExpiry } from "@/app/(app)/vendors/actions";
+import { sendMyDigestNow } from "@/app/(app)/alerts/digest-actions";
 import { formatDate } from "@/lib/format";
 import {
   isExpiringSoon,
@@ -17,11 +18,16 @@ import {
   type ContractWithVendor,
   type Vendor,
 } from "@/lib/types";
-import { code, panel, panelHeader, primaryButton, secondaryButton, severityStripe, tableWrap, td, th, tr } from "@/components/theme";
+import { code, errorBanner, panel, panelHeader, primaryButton, secondaryButton, severityStripe, tableWrap, td, th, tr } from "@/components/theme";
 
 export const dynamic = "force-dynamic";
 
-export default async function AlertsPage() {
+export default async function AlertsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ digest?: string; message?: string }>;
+}) {
+  const { digest, message } = await searchParams;
   const profile = await requireProfile();
   const supabase = await createClient();
   await sweepExpiredContracts(supabase);
@@ -79,15 +85,31 @@ export default async function AlertsPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Alerts</h1>
-        <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-          Every contract expiring within 60 days or already expired, by owner.
-        </p>
-        <p className="mt-1 text-sm text-slate-500">
-          This is what used to mean manually scanning a spreadsheet. Renew, terminate, or acknowledge each one below.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-sm font-bold uppercase tracking-wider text-slate-500">Alerts</h1>
+          <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+            Every contract expiring within 60 days or already expired, by owner.
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            This is what used to mean manually scanning a spreadsheet. Renew, terminate, or acknowledge each one below.
+          </p>
+        </div>
+        <form action={sendMyDigestNow} className="self-start">
+          <button type="submit" className={secondaryButton}>
+            Email me this digest now
+          </button>
+        </form>
       </div>
+
+      {digest === "sent" && (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          Digest sent to {profile.email}.
+        </div>
+      )}
+      {digest === "error" && (
+        <p className={errorBanner}>{message ?? "Could not send the digest."}</p>
+      )}
 
       {needsAttention.length === 0 && (
         <div className={`${panel} p-8 text-center text-slate-500`}>Nothing needs a decision right now.</div>
