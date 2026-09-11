@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { provisionOrganization } from "@/lib/auth";
 
@@ -14,14 +15,27 @@ export async function signUp(formData: FormData) {
     throw new Error("Company name, email, and password are required");
   }
 
+  const headerList = await headers();
+  const origin =
+    headerList.get("origin") ??
+    process.env.NEXT_PUBLIC_APP_URL ??
+    "http://localhost:3000";
+
   const supabase = await createClient();
 
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
-    // Stored so provisionOrganization can create the workspace later if this
-    // project requires email confirmation and no session comes back below.
-    options: { data: { company_name: companyName, full_name: fullName || null } },
+    options: {
+      // Stored so provisionOrganization can create the workspace later if
+      // this project requires email confirmation and no session comes back
+      // below. emailRedirectTo must match wherever this request actually
+      // came from (prod domain or a Vercel preview) — without it Supabase
+      // falls back to the project's Site URL default, which sends every
+      // confirmation link to localhost regardless of where signup happened.
+      data: { company_name: companyName, full_name: fullName || null },
+      emailRedirectTo: `${origin}/auth/callback`,
+    },
   });
 
   if (authError) {
