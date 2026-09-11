@@ -5,11 +5,11 @@ import { requireProfile } from "@/lib/auth";
 import { sweepExpiredContracts } from "@/lib/contracts";
 import { canMutate } from "@/lib/permissions";
 import { VendorForm } from "@/components/VendorForm";
-import { ContractStatusBadge, ExpiringBadge, VendorStatusBadge } from "@/components/StatusBadge";
-import { deleteVendor, updateVendor } from "@/app/(app)/vendors/actions";
+import { ContractStatusBadge, ExpiringBadge, RiskTierBadge, VendorStatusBadge } from "@/components/StatusBadge";
+import { acknowledgeVendorComplianceExpiry, deleteVendor, updateVendor } from "@/app/(app)/vendors/actions";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { isExpiringSoon, isInForce, type Contract, type Vendor } from "@/lib/types";
+import { isExpiringSoon, isInForce, isPastEndDate, type Contract, type Vendor } from "@/lib/types";
 import {
   code,
   dangerLink,
@@ -57,7 +57,13 @@ export default async function VendorDetailPage({
 
   const updateVendorWithId = updateVendor.bind(null, id);
   const deleteVendorWithId = deleteVendor.bind(null, id);
+  const acknowledgeComplianceExpiry = acknowledgeVendorComplianceExpiry.bind(null, id);
   const typedContracts = (contracts as Contract[] | null) ?? [];
+  const typedVendor = vendor as Vendor;
+  const complianceExpired = isPastEndDate(typedVendor.compliance_doc_expires_on);
+  const complianceExpiringSoon = !complianceExpired && isExpiringSoon(typedVendor.compliance_doc_expires_on);
+  const complianceNeedsAttention =
+    (complianceExpired || complianceExpiringSoon) && !typedVendor.compliance_doc_acknowledged_at;
 
   return (
     <div className="space-y-8">
@@ -75,8 +81,9 @@ export default async function VendorDetailPage({
           <h1 className="mt-0.5 text-2xl font-semibold tracking-tight text-slate-900">
             {(vendor as Vendor).name}
           </h1>
-          <div className="mt-2">
+          <div className="mt-2 flex items-center gap-2">
             <VendorStatusBadge status={(vendor as Vendor).status} />
+            <RiskTierBadge tier={typedVendor.risk_tier} />
           </div>
         </div>
         {canEdit && (
@@ -86,11 +93,36 @@ export default async function VendorDetailPage({
         )}
       </div>
 
+      {complianceNeedsAttention && (
+        <div className={`${panel} border-orange-200 bg-orange-50 p-4`}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-orange-900">
+              <span className="font-bold uppercase tracking-wide">
+                {complianceExpired ? "⚠ Compliance document expired" : "⚠ Compliance document expiring soon"}
+              </span>{" "}
+              — {formatDate(typedVendor.compliance_doc_expires_on)}
+            </p>
+            {canEdit && (
+              <form action={acknowledgeComplianceExpiry}>
+                <ConfirmSubmitButton
+                  confirmMessage="Acknowledge this compliance document alert? It'll drop off the alerts list until the situation changes."
+                  className={`${primaryButton} text-xs`}
+                >
+                  Acknowledge
+                </ConfirmSubmitButton>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className={`grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 ${panel}`}>
         <Field label="Contact name" value={(vendor as Vendor).contact_name} />
         <Field label="Contact email" value={(vendor as Vendor).contact_email} />
         <Field label="Contact phone" value={(vendor as Vendor).contact_phone} />
         <Field label="Address" value={(vendor as Vendor).address} />
+        <Field label="Last risk review" value={formatDate(typedVendor.last_risk_review_at)} />
+        <Field label="Compliance doc expires" value={formatDate(typedVendor.compliance_doc_expires_on)} />
         {(vendor as Vendor).notes && (
           <div className="sm:col-span-2">
             <Field label="Notes" value={(vendor as Vendor).notes} />

@@ -40,11 +40,17 @@ export default async function DashboardPage({
 
   const [
     { count: vendorCount },
+    { count: highRiskVendorCount },
     { data: vendorOptions },
     { data: contracts },
     { data: applications },
   ] = await Promise.all([
     supabase.from("vendors").select("*", { count: "exact", head: true }),
+    supabase
+      .from("vendors")
+      .select("*", { count: "exact", head: true })
+      .in("risk_tier", ["high", "critical"])
+      .eq("status", "active"),
     supabase.from("vendors").select("id, vendor_code, name").order("name"),
     contractsQuery,
     supabase
@@ -204,7 +210,7 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiTile
           label="Requests pending review"
           value={pendingApplications.length}
@@ -216,6 +222,12 @@ export default async function DashboardPage({
           value={documentsNeedingAttention.length}
           href="/alerts"
           warn={documentsNeedingAttention.length > 0}
+        />
+        <KpiTile
+          label="High/critical risk vendors"
+          value={highRiskVendorCount ?? 0}
+          href="/vendors?risk=high"
+          warn={(highRiskVendorCount ?? 0) > 0}
         />
         <Link
           href={applyHref}

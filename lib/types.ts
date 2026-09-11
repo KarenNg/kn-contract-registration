@@ -1,4 +1,5 @@
 export type VendorStatus = "active" | "inactive";
+export type RiskTier = "low" | "medium" | "high" | "critical";
 
 export type ContractStatus =
   | "draft"
@@ -31,6 +32,10 @@ export interface Vendor {
   address: string | null;
   status: VendorStatus;
   notes: string | null;
+  risk_tier: RiskTier | null;
+  last_risk_review_at: string | null;
+  compliance_doc_expires_on: string | null;
+  compliance_doc_acknowledged_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -135,6 +140,8 @@ export interface ContractDocumentWithContract extends ContractDocument {
     vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
   } | null;
 }
+
+export const RISK_TIERS: RiskTier[] = ["low", "medium", "high", "critical"];
 
 export const CONTRACT_STATUSES: ContractStatus[] = [
   "draft",
