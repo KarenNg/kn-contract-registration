@@ -1,8 +1,16 @@
+import { notFound } from "next/navigation";
 import { VendorForm } from "@/components/VendorForm";
 import { createVendor } from "@/app/(app)/vendors/actions";
+import { requireProfile } from "@/lib/auth";
+import { canMutate } from "@/lib/permissions";
 import { panel } from "@/components/theme";
 
-export default function NewVendorPage() {
+export default async function NewVendorPage() {
+  const profile = await requireProfile();
+  if (!canMutate(profile.role)) {
+    notFound();
+  }
+
   return (
     <div className="max-w-2xl space-y-6">
       <div>

@@ -1,15 +1,23 @@
+import type { Role } from "@/lib/auth";
 import { CONTRACT_STATUSES, type Contract, type Vendor } from "@/lib/types";
 import { input, label, primaryButton } from "@/components/theme";
+import { OwnerField, type MemberOption } from "@/components/OwnerField";
 
 export function ContractForm({
   contract,
   vendors,
   defaultVendorId,
+  members,
+  currentRole,
+  currentUserId,
   action,
 }: {
   contract?: Contract;
   vendors: Pick<Vendor, "id" | "name" | "vendor_code">[];
   defaultVendorId?: string;
+  members: MemberOption[];
+  currentRole: Role;
+  currentUserId: string;
   action: (formData: FormData) => void;
 }) {
   return (
@@ -78,10 +86,13 @@ export function ContractForm({
           <label className={label}>Currency</label>
           <input name="currency" defaultValue={contract?.currency ?? "USD"} className={input} />
         </div>
-        <div>
-          <label className={label}>Contract owner</label>
-          <input name="owner_name" defaultValue={contract?.owner_name ?? ""} className={input} />
-        </div>
+        <OwnerField
+          members={members}
+          currentRole={currentRole}
+          currentUserId={currentUserId}
+          currentOwnerUserId={contract?.owner_user_id}
+          legacyOwnerName={contract?.owner_name}
+        />
         <div className="flex items-end pb-2">
           <label className={`flex items-center gap-2 ${label}`}>
             <input

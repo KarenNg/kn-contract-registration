@@ -3,10 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
+export type Role = "admin" | "contract_owner" | "management";
+
 export interface CurrentProfile {
   userId: string;
   email: string | null;
   fullName: string | null;
+  role: Role;
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
@@ -27,25 +30,51 @@ export function slugify(name: string): string {
  * yet. Needed both right after signup and as a self-heal fallback: when the
  * Supabase project requires email confirmation, signUp() returns no session,
  * so the org can't be created until the user actually logs in later.
+ *
+ * If an admin invited this email address first, join that org with the
+ * invited role instead of creating a brand-new one — the DB trigger deletes
+ * the consumed invite row once the profile insert succeeds.
  */
 export async function provisionOrganization(
   supabase: SupabaseServerClient,
   user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> },
   overrides?: { companyName?: string; fullName?: string | null },
 ): Promise<void> {
-  const metaCompanyName = user.user_metadata?.company_name;
   const metaFullName = user.user_metadata?.full_name;
+  const fullName =
+    overrides?.fullName?.trim() ||
+    (typeof metaFullName === "string" ? metaFullName.trim() : "") ||
+    null;
 
+  if (user.email) {
+    const { data: invite } = await supabase
+      .from("organization_invites")
+      .select("organization_id, role")
+      .ilike("email", user.email)
+      .maybeSingle();
+
+    if (invite) {
+      const { error: joinError } = await supabase.from("profiles").insert({
+        id: user.id,
+        organization_id: invite.organization_id,
+        full_name: fullName,
+        email: user.email,
+        role: invite.role,
+      });
+
+      if (joinError && joinError.code !== "23505") {
+        throw new Error(joinError.message);
+      }
+      return;
+    }
+  }
+
+  const metaCompanyName = user.user_metadata?.company_name;
   const companyName =
     overrides?.companyName?.trim() ||
     (typeof metaCompanyName === "string" ? metaCompanyName.trim() : "") ||
     (user.email ? user.email.split("@")[0] : "") ||
     "My Company";
-
-  const fullName =
-    overrides?.fullName?.trim() ||
-    (typeof metaFullName === "string" ? metaFullName.trim() : "") ||
-    null;
 
   const baseSlug = slugify(companyName);
   let slug = baseSlug;
@@ -76,7 +105,7 @@ export async function provisionOrganization(
     organization_id: organizationId,
     full_name: fullName,
     email: user.email ?? null,
-    role: "owner",
+    role: "admin",
   });
 
   if (profileError) {
@@ -103,7 +132,7 @@ export async function requireProfile(): Promise<CurrentProfile> {
 
   let { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, is_platform_admin, organizations(id, name, slug)")
+    .select("full_name, role, is_platform_admin, organizations(id, name, slug)")
     .eq("id", user.id)
     .single();
 
@@ -111,7 +140,7 @@ export async function requireProfile(): Promise<CurrentProfile> {
     await provisionOrganization(supabase, user);
     ({ data: profile } = await supabase
       .from("profiles")
-      .select("full_name, is_platform_admin, organizations(id, name, slug)")
+      .select("full_name, role, is_platform_admin, organizations(id, name, slug)")
       .eq("id", user.id)
       .single());
   }
@@ -130,6 +159,7 @@ export async function requireProfile(): Promise<CurrentProfile> {
     userId: user.id,
     email: user.email ?? null,
     fullName: profile.full_name,
+    role: (profile.role as Role) ?? "management",
     organizationId: organization.id,
     organizationName: organization.name,
     organizationSlug: organization.slug,

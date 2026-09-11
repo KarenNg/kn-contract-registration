@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
 import { sweepExpiredContracts } from "@/lib/contracts";
+import { canManageContract } from "@/lib/permissions";
 import { ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import { acknowledgeAlert } from "@/app/(app)/alerts/actions";
@@ -18,6 +20,7 @@ import { code, panel, panelHeader, primaryButton, secondaryButton, severityStrip
 export const dynamic = "force-dynamic";
 
 export default async function AlertsPage() {
+  const profile = await requireProfile();
   const supabase = await createClient();
   await sweepExpiredContracts(supabase);
 
@@ -29,7 +32,7 @@ export default async function AlertsPage() {
       .order("end_date", { ascending: true, nullsFirst: false }),
     supabase
       .from("contract_documents")
-      .select("*, contracts(id, contract_code, title, vendor_id, vendors(id, vendor_code, name))")
+      .select("*, contracts(id, contract_code, title, vendor_id, owner_user_id, vendors(id, vendor_code, name))")
       .not("expires_on", "is", null)
       .is("superseded_at", null)
       .order("expires_on", { ascending: true }),
@@ -125,14 +128,16 @@ export default async function AlertsPage() {
                             <Link href={`/contracts/${contract.id}`} className={`${secondaryButton} text-center`}>
                               Decide
                             </Link>
-                            <form action={acknowledge}>
-                              <ConfirmSubmitButton
-                                confirmMessage="Acknowledge this alert? It'll drop off this list until the situation changes."
-                                className={`${primaryButton} w-full`}
-                              >
-                                Acknowledge
-                              </ConfirmSubmitButton>
-                            </form>
+                            {canManageContract(profile.role, profile.userId, contract.owner_user_id) && (
+                              <form action={acknowledge}>
+                                <ConfirmSubmitButton
+                                  confirmMessage="Acknowledge this alert? It'll drop off this list until the situation changes."
+                                  className={`${primaryButton} w-full`}
+                                >
+                                  Acknowledge
+                                </ConfirmSubmitButton>
+                              </form>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -222,14 +227,16 @@ export default async function AlertsPage() {
                               <Link href={`/contracts/${contract.id}`} className={`${secondaryButton} text-center`}>
                                 Replace
                               </Link>
-                              <form action={acknowledge}>
-                                <ConfirmSubmitButton
-                                  confirmMessage="Acknowledge this document's expiry alert? It'll drop off this list until the situation changes."
-                                  className={`${primaryButton} w-full`}
-                                >
-                                  Acknowledge
-                                </ConfirmSubmitButton>
-                              </form>
+                              {canManageContract(profile.role, profile.userId, contract.owner_user_id) && (
+                                <form action={acknowledge}>
+                                  <ConfirmSubmitButton
+                                    confirmMessage="Acknowledge this document's expiry alert? It'll drop off this list until the situation changes."
+                                    className={`${primaryButton} w-full`}
+                                  >
+                                    Acknowledge
+                                  </ConfirmSubmitButton>
+                                </form>
+                              )}
                             </div>
                           )}
                         </td>

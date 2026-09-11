@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { sweepExpiredContracts } from "@/lib/contracts";
+import { canMutate } from "@/lib/permissions";
 import { ApplicationStatusBadge, ContractStatusBadge, ExpiringBadge } from "@/components/StatusBadge";
 import { ContractStatusChart, ExpiringHorizonChart, VendorConcentrationChart } from "@/components/DashboardCharts";
 import { VendorFilter } from "@/components/VendorFilter";
@@ -27,6 +28,7 @@ export default async function DashboardPage({
   const { vendor: vendorId } = await searchParams;
   const profile = await requireProfile();
   const applyHref = `/apply/${profile.organizationSlug}`;
+  const canEdit = canMutate(profile.role);
   const supabase = await createClient();
   await sweepExpiredContracts(supabase);
 
@@ -323,9 +325,11 @@ export default async function DashboardPage({
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">All contracts</h2>
-          <Link href="/contracts/new" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
-            + New contract
-          </Link>
+          {canEdit && (
+            <Link href="/contracts/new" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
+              + New contract
+            </Link>
+          )}
         </div>
         <div className={tableWrap}>
           <div className="overflow-x-auto">
@@ -376,11 +380,17 @@ export default async function DashboardPage({
                 {allContracts.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                      No contracts yet.{" "}
-                      <Link href="/contracts/new" className="text-blue-600 hover:underline">
-                        Create one
-                      </Link>
-                      .
+                      {canEdit ? (
+                        <>
+                          No contracts yet.{" "}
+                          <Link href="/contracts/new" className="text-blue-600 hover:underline">
+                            Create one
+                          </Link>
+                          .
+                        </>
+                      ) : (
+                        "No contracts yet."
+                      )}
                     </td>
                   </tr>
                 )}

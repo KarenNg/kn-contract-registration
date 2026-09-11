@@ -18,12 +18,14 @@ export function Nav({
   organizationSlug,
   email,
   isPlatformAdmin,
+  isAdmin,
   alertCount,
 }: {
   organizationName: string;
   organizationSlug: string;
   email: string | null;
   isPlatformAdmin: boolean;
+  isAdmin: boolean;
   alertCount?: number;
 }) {
   const pathname = usePathname();
@@ -63,6 +65,18 @@ export function Nav({
               </Link>
             );
           })}
+          {isAdmin && (
+            <Link
+              href="/team"
+              className={`border-b-2 px-3 py-1.5 transition-colors ${
+                pathname.startsWith("/team")
+                  ? "border-[#EC7211] text-white"
+                  : "border-transparent text-slate-300 hover:border-white/30 hover:text-white"
+              }`}
+            >
+              Team
+            </Link>
+          )}
           {isPlatformAdmin && (
             <Link
               href="/admin"
@@ -143,6 +157,17 @@ export function Nav({
                 </Link>
               );
             })}
+            {isAdmin && (
+              <Link
+                href="/team"
+                onClick={() => setMenuOpen(false)}
+                className={`rounded px-3 py-2.5 ${
+                  pathname.startsWith("/team") ? "bg-white/10 text-white" : "text-slate-300 hover:bg-white/5 hover:text-white"
+                }`}
+              >
+                Team
+              </Link>
+            )}
             {isPlatformAdmin && (
               <Link
                 href="/admin"

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
 import { sweepExpiredContracts } from "@/lib/contracts";
+import { canMutate } from "@/lib/permissions";
 import { VendorForm } from "@/components/VendorForm";
 import { ContractStatusBadge, ExpiringBadge, VendorStatusBadge } from "@/components/StatusBadge";
 import { deleteVendor, updateVendor } from "@/app/(app)/vendors/actions";
@@ -32,6 +34,8 @@ export default async function VendorDetailPage({
 }) {
   const { id } = await params;
   const { error: errorMessage } = await searchParams;
+  const profile = await requireProfile();
+  const canEdit = canMutate(profile.role);
   const supabase = await createClient();
   await sweepExpiredContracts(supabase);
 
@@ -75,9 +79,11 @@ export default async function VendorDetailPage({
             <VendorStatusBadge status={(vendor as Vendor).status} />
           </div>
         </div>
-        <Link href={`/contracts/new?vendor_id=${id}`} className={`${primaryButton} self-start`}>
-          + New contract
-        </Link>
+        {canEdit && (
+          <Link href={`/contracts/new?vendor_id=${id}`} className={`${primaryButton} self-start`}>
+            + New contract
+          </Link>
+        )}
       </div>
 
       <div className={`grid grid-cols-1 gap-4 p-6 sm:grid-cols-2 ${panel}`}>
@@ -144,20 +150,24 @@ export default async function VendorDetailPage({
         </div>
       </section>
 
-      <details className={`p-6 ${panel}`}>
-        <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-500">
-          Edit vendor
-        </summary>
-        <div className="mt-4 max-w-2xl">
-          <VendorForm vendor={vendor as Vendor} action={updateVendorWithId} />
-        </div>
-      </details>
+      {canEdit && (
+        <>
+          <details className={`p-6 ${panel}`}>
+            <summary className="cursor-pointer text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Edit vendor
+            </summary>
+            <div className="mt-4 max-w-2xl">
+              <VendorForm vendor={vendor as Vendor} action={updateVendorWithId} />
+            </div>
+          </details>
 
-      <form action={deleteVendorWithId}>
-        <ConfirmSubmitButton confirmMessage="Delete this vendor? This cannot be undone." className={dangerLink}>
-          Delete vendor
-        </ConfirmSubmitButton>
-      </form>
+          <form action={deleteVendorWithId}>
+            <ConfirmSubmitButton confirmMessage="Delete this vendor? This cannot be undone." className={dangerLink}>
+              Delete vendor
+            </ConfirmSubmitButton>
+          </form>
+        </>
+      )}
     </div>
   );
 }

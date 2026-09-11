@@ -48,6 +48,7 @@ export interface Contract {
   currency: string;
   status: ContractStatus;
   owner_name: string | null;
+  owner_user_id: string | null;
   auto_renew: boolean;
   renewal_terms: string | null;
   notes: string | null;
@@ -130,6 +131,7 @@ export interface ContractDocumentWithContract extends ContractDocument {
     contract_code: string;
     title: string;
     vendor_id: string;
+    owner_user_id: string | null;
     vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
   } | null;
 }

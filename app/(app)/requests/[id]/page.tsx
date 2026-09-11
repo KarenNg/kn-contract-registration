@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { requireProfile } from "@/lib/auth";
+import { canMutate } from "@/lib/permissions";
 import { ApplicationStatusBadge } from "@/components/StatusBadge";
 import { ConfirmSubmitButton } from "@/components/ConfirmSubmitButton";
 import {
@@ -30,6 +32,8 @@ export default async function ApplicationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const profile = await requireProfile();
+  const canEdit = canMutate(profile.role);
   const supabase = await createClient();
 
   const { data: application } = await supabase
@@ -126,6 +130,10 @@ export default async function ApplicationDetailPage({
             )}
           </div>
         </div>
+      ) : !canEdit ? (
+        <div className={`${panel} border-slate-200 bg-slate-50 p-4 text-sm text-slate-600`}>
+          Your role (Management) is read-only — you can view this request but not review or decide it.
+        </div>
       ) : (
         <div className={panel}>
           <div className={panelHeader}>
@@ -180,11 +188,13 @@ export default async function ApplicationDetailPage({
         </div>
       )}
 
-      <form action={deleteApplicationWithId}>
-        <ConfirmSubmitButton confirmMessage="Delete this application? This cannot be undone." className={dangerLink}>
-          Delete application
-        </ConfirmSubmitButton>
-      </form>
+      {canEdit && (
+        <form action={deleteApplicationWithId}>
+          <ConfirmSubmitButton confirmMessage="Delete this application? This cannot be undone." className={dangerLink}>
+            Delete application
+          </ConfirmSubmitButton>
+        </form>
+      )}
     </div>
   );
 }
