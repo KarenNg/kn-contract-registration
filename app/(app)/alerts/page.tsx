@@ -9,6 +9,7 @@ import { acknowledgeAlert } from "@/app/(app)/alerts/actions";
 import { acknowledgeDocumentExpiry } from "@/app/(app)/contracts/documents-actions";
 import { acknowledgeVendorComplianceExpiry } from "@/app/(app)/vendors/actions";
 import { completeObligation } from "@/app/(app)/contracts/obligations-actions";
+import { resolveIncident } from "@/app/(app)/vendors/incidents-actions";
 import { sendMyDigestNow } from "@/app/(app)/alerts/digest-actions";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
@@ -19,6 +20,7 @@ import {
   type ContractObligationWithContract,
   type ContractWithVendor,
   type Vendor,
+  type VendorIncidentWithVendor,
 } from "@/lib/types";
 import { code, errorBanner, panel, panelHeader, primaryButton, secondaryButton, severityStripe, tableWrap, td, th, tr } from "@/components/theme";
 
@@ -42,6 +44,7 @@ export default async function AlertsPage({
     { data: vendorsWithCompliance },
     { data: obligations },
     { data: contractsWithPayments },
+    { data: incidents },
   ] = await Promise.all([
     supabase
       .from("contracts")
@@ -67,6 +70,10 @@ export default async function AlertsPage({
       .from("contracts")
       .select("id, contract_code, title, value, currency, owner_user_id, vendors(id, vendor_code, name), contract_payments(amount)")
       .not("value", "is", null),
+    supabase
+      .from("vendor_incidents")
+      .select("*, vendors(id, vendor_code, name)")
+      .order("occurred_on", { ascending: false }),
   ]);
 
   const allContracts = (contracts as ContractWithVendor[] | null) ?? [];
@@ -112,6 +119,11 @@ export default async function AlertsPage({
   const overBudgetContracts = ((contractsWithPayments as unknown as ContractWithPayments[] | null) ?? [])
     .map((c) => ({ ...c, totalPaid: (c.contract_payments ?? []).reduce((sum, p) => sum + p.amount, 0) }))
     .filter((c) => c.totalPaid > c.value);
+
+  const allIncidents = (incidents as VendorIncidentWithVendor[] | null) ?? [];
+  const openHighSeverityIncidents = allIncidents.filter(
+    (i) => !i.resolved_at && (i.severity === "high" || i.severity === "critical"),
+  );
 
   const byOwner = new Map<string, ContractWithVendor[]>();
   for (const contract of needsAttention) {
@@ -621,6 +633,89 @@ export default async function AlertsPage({
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Vendor risk incidents
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Open high or critical severity incidents logged against a vendor — evidence behind the risk tier.
+          </p>
+        </div>
+
+        {openHighSeverityIncidents.length === 0 && (
+          <div className={`${panel} p-8 text-center text-slate-500`}>No open high/critical severity incidents.</div>
+        )}
+
+        {openHighSeverityIncidents.length > 0 && (
+          <div className={tableWrap}>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr>
+                    <th className={th}>Incident</th>
+                    <th className={th}>Vendor</th>
+                    <th className={th}>Severity</th>
+                    <th className={th}>Occurred</th>
+                    <th className={th} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {openHighSeverityIncidents.map((incident) => {
+                    const resolve = resolveIncident.bind(null, incident.vendor_id, incident.id);
+                    return (
+                      <tr key={incident.id} className={`${tr} ${incident.severity === "critical" ? "bg-red-50" : "bg-orange-50"}`}>
+                        <td className="px-4 py-3">
+                          <span className="font-medium text-slate-900">{incident.title}</span>
+                        </td>
+                        <td className={td}>
+                          {incident.vendors ? (
+                            <Link href={`/vendors/${incident.vendors.id}`} className="hover:text-blue-700">
+                              {incident.vendors.name}
+                            </Link>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white ${
+                              incident.severity === "critical" ? "bg-red-600" : "bg-orange-500"
+                            }`}
+                          >
+                            {incident.severity}
+                          </span>
+                        </td>
+                        <td className={td}>{formatDate(incident.occurred_on)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+                            {incident.vendors && (
+                              <Link href={`/vendors/${incident.vendors.id}`} className={`${secondaryButton} text-center`}>
+                                View vendor
+                              </Link>
+                            )}
+                            {canEdit && (
+                              <form action={resolve}>
+                                <ConfirmSubmitButton
+                                  confirmMessage="Mark this incident resolved?"
+                                  className={`${primaryButton} w-full`}
+                                >
+                                  Resolve
+                                </ConfirmSubmitButton>
+                              </form>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -111,6 +111,51 @@ export function VendorForm({
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 rounded-md border border-slate-200 bg-slate-50 p-4 sm:grid-cols-3">
+        <div className="sm:col-span-3">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            Risk breakdown (optional)
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-400">
+            Category detail behind the overall risk tier above — financial, security, and operational risk
+            don&apos;t always move together.
+          </p>
+        </div>
+        <div>
+          <label className={label}>Financial risk</label>
+          <select name="financial_risk_tier" defaultValue={vendor?.financial_risk_tier ?? ""} className={input}>
+            <option value="">Not rated</option>
+            {RISK_TIERS.map((tier) => (
+              <option key={tier} value={tier} className="capitalize">
+                {tier}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={label}>Security risk</label>
+          <select name="security_risk_tier" defaultValue={vendor?.security_risk_tier ?? ""} className={input}>
+            <option value="">Not rated</option>
+            {RISK_TIERS.map((tier) => (
+              <option key={tier} value={tier} className="capitalize">
+                {tier}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={label}>Operational risk</label>
+          <select name="operational_risk_tier" defaultValue={vendor?.operational_risk_tier ?? ""} className={input}>
+            <option value="">Not rated</option>
+            {RISK_TIERS.map((tier) => (
+              <option key={tier} value={tier} className="capitalize">
+                {tier}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div>
         <label className={label}>Notes</label>
         <textarea name="notes" rows={3} defaultValue={vendor?.notes ?? ""} className={input} />

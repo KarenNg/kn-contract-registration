@@ -41,6 +41,9 @@ export interface Vendor {
   strategic_tier: StrategicTier | null;
   performance_rating: PerformanceRating | null;
   last_performance_review_at: string | null;
+  financial_risk_tier: RiskTier | null;
+  security_risk_tier: RiskTier | null;
+  operational_risk_tier: RiskTier | null;
   created_at: string;
   updated_at: string;
 }
@@ -192,6 +195,21 @@ export interface ContractPaymentWithContract extends ContractPayment {
     owner_user_id: string | null;
     vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
   } | null;
+}
+
+export interface VendorIncident {
+  id: string;
+  vendor_id: string;
+  title: string;
+  description: string | null;
+  severity: RiskTier;
+  occurred_on: string;
+  resolved_at: string | null;
+  created_at: string;
+}
+
+export interface VendorIncidentWithVendor extends VendorIncident {
+  vendors: Pick<Vendor, "id" | "vendor_code" | "name"> | null;
 }
 
 export const RISK_TIERS: RiskTier[] = ["low", "medium", "high", "critical"];

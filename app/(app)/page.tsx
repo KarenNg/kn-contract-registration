@@ -39,10 +39,18 @@ export default async function DashboardPage({
     .order("end_date", { ascending: true, nullsFirst: false });
   if (vendorId) contractsQuery = contractsQuery.eq("vendor_id", vendorId);
 
+  let openIncidentsQuery = supabase
+    .from("vendor_incidents")
+    .select("*", { count: "exact", head: true })
+    .in("severity", ["high", "critical"])
+    .is("resolved_at", null);
+  if (vendorId) openIncidentsQuery = openIncidentsQuery.eq("vendor_id", vendorId);
+
   const [
     { count: vendorCount },
     { count: highRiskVendorCount },
     { count: strategicHighRiskVendorCount },
+    { count: openIncidentCount },
     { data: vendorOptions },
     { data: contracts },
     { data: applications },
@@ -59,6 +67,7 @@ export default async function DashboardPage({
       .in("risk_tier", ["high", "critical"])
       .eq("strategic_tier", "strategic")
       .eq("status", "active"),
+    openIncidentsQuery,
     supabase.from("vendors").select("id, vendor_code, name").order("name"),
     contractsQuery,
     supabase
@@ -253,7 +262,7 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-8">
         <KpiTile
           label="Requests pending review"
           value={pendingApplications.length}
@@ -277,6 +286,12 @@ export default async function DashboardPage({
           value={overBudgetCount}
           href="/alerts"
           warn={overBudgetCount > 0}
+        />
+        <KpiTile
+          label="Open risk incidents"
+          value={openIncidentCount ?? 0}
+          href="/alerts"
+          warn={(openIncidentCount ?? 0) > 0}
         />
         <KpiTile
           label="High/critical risk vendors"
